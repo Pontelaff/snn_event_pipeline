@@ -25,12 +25,12 @@ class LIF_neuron:
 
         # only update after refractory period
         if (t_now - self.last_spike) * 1000 > T_REFRACTORY:
-            if self.u > U_REST:
+            if self.u != U_REST:
                 t_passed = (t_now - self.last_update) * 1000
                 # decay depending on time since last update
-                decay_rate = np.exp(-t_passed/TAU)
+                decay_rate = 1 - np.exp(-t_passed/TAU)
                 # membrane potential decay
-                self.u = self.u*decay_rate
+                self.u = self.u - (self.u - U_REST) * decay_rate
 
             # increase membrane potential by weight of incoming spike
             u_next = self.u + weight
