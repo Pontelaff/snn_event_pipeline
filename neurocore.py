@@ -33,8 +33,8 @@ class Neurocore:
     def __init__(self, channel) -> None:
         self.channel = channel
         self.layer = None
-        self.neuronStates = torch.zeros([32,KERNEL_SIZE,KERNEL_SIZE,2]) # Tensor containing neighbours of spiking neuron
-        self.kernels = None # 32*3*3 Tensor containing one channel of 32 Kernels
+        self.neuronStates = np.zeros([32,KERNEL_SIZE,KERNEL_SIZE,2], dtype=np.float16) # numpy array containing neighbours of spiking neuron
+        self.kernels = None # 32*3*3 numpy array containing one channel of 32 Kernels
         self.spikeLeak = None
         self.spikeKernel = None
 
@@ -53,11 +53,11 @@ class Neurocore:
             self.neuronStates[c] = n
         self.spikeLeak = s
 
-    def applyLeak(self, u, t_last, t_now) -> torch.HalfTensor:
+    def applyLeak(self, u, t_last, t_now) -> np.array:
         t_leak = t_now - t_last
         leak = LEAK_RATE / t_leak
         u = u * leak
-        return torch.HalfTensor([u, t_now])
+        return np.array([u, t_now], dtype=np.float16)
 
     def leakNeurons(self):
         channels = len(self.neuronStates)
@@ -97,19 +97,19 @@ class Neurocore:
 
 
 
-allKernels = torch.rand([7, CONV_CHANNELS, CONV_CHANNELS, KERNEL_SIZE, KERNEL_SIZE], dtype=torch.float16)
-allNeurons = torch.ones([7, CONV_CHANNELS, SEG_WIDTH, SEG_HEIGHT, 2], dtype=torch.float16)
+allKernels = np.random.rand(7, CONV_CHANNELS, CONV_CHANNELS, KERNEL_SIZE, KERNEL_SIZE).astype(np.float16)
+allNeurons = np.ones([7, CONV_CHANNELS, SEG_WIDTH, SEG_HEIGHT, 2], dtype=np.float16)
 spike = Spike(0,0,12)
 
 # pad each channel with zeros (don't pad neuron states)
-zeroPad = torch.nn.ConstantPad3d((0,0,1,1,1,1), 0)
-layer1Neurons = zeroPad(allNeurons[1])
+#zeroPad = np.pad((0,0),(1,1),(1,1),(0,0), 'constant')
+layer1Neurons = np.pad(allNeurons[1], ((0,0),(1,1),(1,1),(0,0)), 'constant')
 
 # recognizable test values
-allKernels[1,0,0,0] = torch.HalfTensor([1,2,3])
-allKernels[1,1,0,0] = torch.HalfTensor([44,55,66])
-allKernels[1,2,0,1] = torch.HalfTensor([0,55,0])
-layer1Neurons[0,11,23:26] = torch.HalfTensor([[0,1],[2,3],[55,10]])
+allKernels[1,0,0,0] = [1,2,3]
+allKernels[1,1,0,0] = [44,55,66]
+allKernels[1,2,0,1] = [0,55,0]
+layer1Neurons[0,11,23:26] = [[0,1],[2,3],[55,10]]
 
 nc = Neurocore(0)
 nc.assignLayer(1, allKernels)
