@@ -29,12 +29,6 @@ U_THRESH = 1
 #         else:
 #             return 0
 
-def applyLeak(u, t_last, t_now):
-        t_leak = t_now - t_last
-        leak = LEAK_RATE / t_leak
-        u = u * leak
-        return torch.HalfTensor([u, t_now])
-
 class Neurocore:
     def __init__(self, channel) -> None:
         self.channel = channel
@@ -58,13 +52,19 @@ class Neurocore:
             self.neuronStates[c] = n
         self.spikeLeak = s
 
+    def applyLeak(u, t_last, t_now) -> torch.HalfTensor:
+        t_leak = t_now - t_last
+        leak = LEAK_RATE / t_leak
+        u = u * leak
+        return torch.HalfTensor([u, t_now])
+
     def leakNeurons(self):
         channels = len(self.neuronStates)
         # self.neuronStates.apply_(applyLeak()) Doesn't work because it's applied on both u and t
         for c in range(channels):
             for x in range(KERNEL_SIZE):
                 for y in range(KERNEL_SIZE):
-                    self.neuronStates[c, x, y] = applyLeak(self.neuronStates[c,x,y,0], self.neuronStates[c,x,y,1], self.spikeLeak.timestamp)
+                    self.neuronStates[c, x, y] = self.applyLeak(self.neuronStates[c,x,y,0], self.neuronStates[c,x,y,1], self.spikeLeak.timestamp)
         # forward spike to kernel module
         self.spikeKernel = self.spikeLeak
 
