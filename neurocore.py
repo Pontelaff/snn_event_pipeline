@@ -1,7 +1,6 @@
 from utils import Spike, Event, EventQueue
 import numpy as np
 
-KERNEL_SIZE = 3
 LEAK_RATE = 0.17
 U_RESET = 0
 U_THRESH = 1
@@ -35,16 +34,18 @@ class Neurocore:
     spikeLeak = None    # spike for neuron Leak step
     spikeConv = None    # spike for convolution step
 
-    def __init__(self, channel, numKernels) -> None:
+    def __init__(self, channel, numKernels, kernelSize) -> None:
         """
         This is the initialization function for a neurocore managing input from one channel in a convolutional
         neural network layer.
 
         @param channel The number of the channel, which this neurocore is receiving spikes from.
         @param numKernels The number of kernels in the layer. This also determines the number of output channels.
+        @param kernelSize The height and with of the kernels
         """
         self.channel = channel
-        self.neuronStatesLeak = np.zeros([numKernels,KERNEL_SIZE,KERNEL_SIZE,2], dtype=np.float16) # numpy array containing neighbours of spiking neuron
+        self.kernelSize = kernelSize
+        self.neuronStatesLeak = np.zeros([numKernels,kernelSize,kernelSize,2], dtype=np.float16) # numpy array containing neighbours of spiking neuron
         self.neuronStatesConv = self.neuronStatesLeak
 
     def assignLayer(self, newLayer, kernels):
@@ -105,8 +106,8 @@ class Neurocore:
         channels = len(self.neuronStatesLeak)
         # self.neuronStates.apply_(applyLeak()) Doesn't work because it's applied on both u and t
         for c in range(channels):
-            for x in range(KERNEL_SIZE):
-                for y in range(KERNEL_SIZE):
+            for x in range(self.kernelSize):
+                for y in range(self.kernelSize):
                     u = self.neuronStatesLeak[c,x,y,0].item()
                     t_last = self.neuronStatesLeak[c,x,y,1].item()
                     self.neuronStatesLeak[c, x, y] = self.applyLeak(u, t_last, self.spikeLeak.timestamp)
@@ -122,9 +123,9 @@ class Neurocore:
         """
         channels = len(self.neuronStatesConv)
         for c in range(channels):
-            for x in range(KERNEL_SIZE):
-                for y in range(KERNEL_SIZE):
-                    self.neuronStatesConv[c, x, y, 0] += self.kernels[c, KERNEL_SIZE-x-1, KERNEL_SIZE-y-1]
+            for x in range(self.kernelSize):
+                for y in range(self.kernelSize):
+                    self.neuronStatesConv[c, x, y, 0] += self.kernels[c, self.kernelSize-x-1, self.kernelSize-y-1]
 
     def checkTreshold(self) -> EventQueue:
         """
@@ -137,8 +138,8 @@ class Neurocore:
         channels = len(self.neuronStatesConv)
         # self.neuronStatesConv.apply_(checkTresh()) Doesn't work because it's applied on both u and t
         for c in range(channels):
-            for x in range(KERNEL_SIZE):
-                for y in range(KERNEL_SIZE):
+            for x in range(self.kernelSize):
+                for y in range(self.kernelSize):
                     if self.neuronStatesConv[c, x, y, 0] > U_THRESH:
                         self.neuronStatesConv[c, x, y, 0] = U_RESET
                         x_pos = self.spikeConv.x_pos + x -1
