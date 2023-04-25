@@ -48,11 +48,12 @@ class Neurocore:
         # for each channel of current layer
         for c in range(channels):
             # load neuron states neighbouring spike coordinates
-            n = neurons[c, s.x_pos-1:s.x_pos+2, s.y_pos-1:s.y_pos+2]
+            # start pos-1 stop pos+2 and increment by 1 to account for padding
+            n = neurons[c, s.x_pos:s.x_pos+3, s.y_pos:s.y_pos+3]
             self.neuronStates[c] = n
         self.spikeLeak = s
 
-    def applyLeak(u, t_last, t_now) -> torch.HalfTensor:
+    def applyLeak(self, u, t_last, t_now) -> torch.HalfTensor:
         t_leak = t_now - t_last
         leak = LEAK_RATE / t_leak
         u = u * leak
@@ -64,7 +65,9 @@ class Neurocore:
         for c in range(channels):
             for x in range(KERNEL_SIZE):
                 for y in range(KERNEL_SIZE):
-                    self.neuronStates[c, x, y] = self.applyLeak(self.neuronStates[c,x,y,0], self.neuronStates[c,x,y,1], self.spikeLeak.timestamp)
+                    u = self.neuronStates[c,x,y,0].item()
+                    t_last = self.neuronStates[c,x,y,1].item()
+                    self.neuronStates[c, x, y] = self.applyLeak(u, t_last, self.spikeLeak.timestamp)
         # forward spike to kernel module
         self.spikeKernel = self.spikeLeak
 
@@ -75,7 +78,7 @@ class Neurocore:
                 for y in range(KERNEL_SIZE):
                     self.neuronStates[c, x, y, 0] += self.kernels[c, KERNEL_SIZE-x-1, KERNEL_SIZE-y-1]
 
-    def checkTreshold(self):
+    def checkTreshold(self) -> EventQueue:
         queue = EventQueue(self.layer)
         channels = len(self.neuronStates)
         # self.neuronStates.apply_(checkTresh()) Doesn't work because it's applied on both u and t
@@ -87,7 +90,8 @@ class Neurocore:
                         x_pos = self.spikeKernel.x_pos + x -1
                         y_pos = self.spikeKernel.y_pos + y -1
                         t = self.spikeKernel.timestamp
-                        queue.put(Event(x_pos, y_pos, t, c))
+                        if min(x_pos, y_pos) >= 0 and max(x_pos, y_pos <=31):
+                            queue.put(Event(x_pos, y_pos, t, c))
 
         return queue
 
@@ -95,14 +99,17 @@ class Neurocore:
 
 allKernels = torch.rand([7, CONV_CHANNELS, CONV_CHANNELS, KERNEL_SIZE, KERNEL_SIZE], dtype=torch.float16)
 allNeurons = torch.ones([7, CONV_CHANNELS, SEG_WIDTH, SEG_HEIGHT, 2], dtype=torch.float16)
-spike = Spike(12,24,12)
+spike = Spike(0,0,12)
 
-layer1Neurons = allNeurons[1]
+# pad each channel with zeros (don't pad neuron states)
+zeroPad = torch.nn.ConstantPad3d((0,0,1,1,1,1), 0)
+layer1Neurons = zeroPad(allNeurons[1])
 
 # recognizable test values
 allKernels[1,0,0,0] = torch.HalfTensor([1,2,3])
-layer1Neurons[0,11,23:26] = torch.HalfTensor([[0,1],[2,3],[55,10]])
 allKernels[1,1,0,0] = torch.HalfTensor([44,55,66])
+allKernels[1,2,0,1] = torch.HalfTensor([0,55,0])
+layer1Neurons[0,11,23:26] = torch.HalfTensor([[0,1],[2,3],[55,10]])
 
 nc = Neurocore(0)
 nc.assignLayer(1, allKernels)
