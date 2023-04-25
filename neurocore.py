@@ -1,10 +1,7 @@
 from utils import Spike, Event, EventQueue
 import numpy as np
 
-CONV_CHANNELS = 32
 KERNEL_SIZE = 3
-SEG_WIDTH = 32
-SEG_HEIGHT = 32
 LEAK_RATE = 0.17
 U_RESET = 0
 U_THRESH = 1
@@ -31,20 +28,24 @@ U_THRESH = 1
 
 
 class Neurocore:
-    def __init__(self, channel) -> None:
-        """
-        This is the initialization function for a neural network layer, setting various attributes such
-        as the channel, neuron states, kernels, and spike leak.
 
-        @param channel The channel parameter is a variable that represents the number of channels in the
-        input data. In this case, it is being used to initialize the object's channel attribute.
+    # member attributes
+    layer = None        # the currently active layer
+    kernels = None      # 32*3*3 numpy array containing one channel each of 32 Kernels
+    spikeLeak = None    # spike for neuron Leak step
+    spikeConv = None    # spike for convolution step
+
+    def __init__(self, channel, numKernels) -> None:
+        """
+        This is the initialization function for a neurocore managing input from one channel in a convolutional
+        neural network layer.
+
+        @param channel The number of the channel, which this neurocore is receiving spikes from.
+        @param numKernels The number of kernels in the layer. This also determines the number of output channels.
         """
         self.channel = channel
-        self.layer = None
-        self.neuronStates = np.zeros([CONV_CHANNELS,KERNEL_SIZE,KERNEL_SIZE,2], dtype=np.float16) # numpy array containing neighbours of spiking neuron
-        self.kernels = None # 32*3*3 numpy array containing one channel of 32 Kernels
-        self.spikeLeak = None
-        self.spikeKernel = None
+        self.neuronStatesLeak = np.zeros([numKernels,KERNEL_SIZE,KERNEL_SIZE,2], dtype=np.float16) # numpy array containing neighbours of spiking neuron
+        self.neuronStatesConv = self.neuronStatesLeak
 
     def assignLayer(self, newLayer, kernels):
         """
@@ -56,7 +57,7 @@ class Neurocore:
                 (Layers*Kernals*Channels*KSize*KSize)
         """
         self.layer = newLayer
-        # load kernels
+        # from active layer for all kernels load the designated channel
         self.kernels = kernels[newLayer, :, self.channel]
 
     def loadNeurons(self, s: Spike, neurons):
@@ -76,7 +77,7 @@ class Neurocore:
             # load neuron states neighbouring spike coordinates
             # start pos-1 stop pos+2 and increment by 1 to account for padding
             n = neurons[c, s.x_pos:s.x_pos+3, s.y_pos:s.y_pos+3]
-            self.neuronStates[c] = n
+            self.neuronStatesLeak[c] = n
         self.spikeLeak = s
 
     def applyLeak(self, u, t_last, t_now) -> np.array:
@@ -101,16 +102,17 @@ class Neurocore:
         This function applies a leak to the neuron states and forwards the spike object to the next
         pipline step performing the convolution.
         """
-        channels = len(self.neuronStates)
+        channels = len(self.neuronStatesLeak)
         # self.neuronStates.apply_(applyLeak()) Doesn't work because it's applied on both u and t
         for c in range(channels):
             for x in range(KERNEL_SIZE):
                 for y in range(KERNEL_SIZE):
-                    u = self.neuronStates[c,x,y,0].item()
-                    t_last = self.neuronStates[c,x,y,1].item()
-                    self.neuronStates[c, x, y] = self.applyLeak(u, t_last, self.spikeLeak.timestamp)
-        # forward spike to convolution step
-        self.spikeKernel = self.spikeLeak
+                    u = self.neuronStatesLeak[c,x,y,0].item()
+                    t_last = self.neuronStatesLeak[c,x,y,1].item()
+                    self.neuronStatesLeak[c, x, y] = self.applyLeak(u, t_last, self.spikeLeak.timestamp)
+        # forward spike and neurons to convolution step
+        self.spikeConv = self.spikeLeak
+        self.neuronStatesConv = self.neuronStatesLeak
 
     def applyKernel(self):
         """
@@ -118,11 +120,11 @@ class Neurocore:
         and one channel (specified by the neurocore) of each kernel. Each kernel will then apply the
         respective weights to a different channel of the current layer.
         """
-        channels = len(self.neuronStates)
+        channels = len(self.neuronStatesConv)
         for c in range(channels):
             for x in range(KERNEL_SIZE):
                 for y in range(KERNEL_SIZE):
-                    self.neuronStates[c, x, y, 0] += self.kernels[c, KERNEL_SIZE-x-1, KERNEL_SIZE-y-1]
+                    self.neuronStatesConv[c, x, y, 0] += self.kernels[c, KERNEL_SIZE-x-1, KERNEL_SIZE-y-1]
 
     def checkTreshold(self) -> EventQueue:
         """
@@ -132,42 +134,17 @@ class Neurocore:
         @return an EventQueue object containing all spikes triggered by the incoming spike.
         """
         queue = EventQueue(self.layer)
-        channels = len(self.neuronStates)
-        # self.neuronStates.apply_(checkTresh()) Doesn't work because it's applied on both u and t
+        channels = len(self.neuronStatesConv)
+        # self.neuronStatesConv.apply_(checkTresh()) Doesn't work because it's applied on both u and t
         for c in range(channels):
             for x in range(KERNEL_SIZE):
                 for y in range(KERNEL_SIZE):
-                    if self.neuronStates[c, x, y, 0] > U_THRESH:
-                        self.neuronStates[c, x, y, 0] = U_RESET
-                        x_pos = self.spikeKernel.x_pos + x -1
-                        y_pos = self.spikeKernel.y_pos + y -1
-                        t = self.spikeKernel.timestamp
+                    if self.neuronStatesConv[c, x, y, 0] > U_THRESH:
+                        self.neuronStatesConv[c, x, y, 0] = U_RESET
+                        x_pos = self.spikeConv.x_pos + x -1
+                        y_pos = self.spikeConv.y_pos + y -1
+                        t = self.spikeConv.timestamp
                         if min(x_pos, y_pos) >= 0 and max(x_pos, y_pos <=31):
                             queue.put(Event(x_pos, y_pos, t, c))
 
         return queue
-
-
-
-allKernels = np.random.rand(7, CONV_CHANNELS, CONV_CHANNELS, KERNEL_SIZE, KERNEL_SIZE).astype(np.float16)
-allNeurons = np.ones([7, CONV_CHANNELS, SEG_WIDTH, SEG_HEIGHT, 2], dtype=np.float16)
-spike = Spike(0,0,12)
-
-# pad each channel with zeros (don't pad neuron states)
-layer1Neurons = np.pad(allNeurons[1], ((0,0),(1,1),(1,1),(0,0)), 'constant')
-
-# recognizable test values
-allKernels[1,0,0,0] = [1,2,3]
-allKernels[1,1,0,0] = [44,55,66]
-allKernels[1,2,0,1] = [0,55,0]
-layer1Neurons[0,11,23:26] = [[0,1],[2,3],[55,10]]
-
-nc = Neurocore(0)
-nc.assignLayer(1, allKernels)
-nc.loadNeurons(spike, layer1Neurons)
-
-nc.leakNeurons()
-nc.applyKernel()
-outQ = nc.checkTreshold()
-
-pass
