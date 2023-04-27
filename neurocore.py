@@ -72,12 +72,12 @@ class Neurocore:
         specified for the Neurocore.
 
         @param newLayer The new layer that the Neurocore will be assigned to.
-        @param kernels All kernals of the neural network as a numpy array
-                (Layers*Kernals*Channels*KSize*KSize)
+        @param kernels All kernals of the neural network layer as a numpy array
+                [Kernals, Channels, KSize, KSize]
         """
-        self.layer = newLayer
+        self.layer = newLayer-1
         # from active layer for all kernels load the designated channel
-        self.kernels = kernels[newLayer, :, self.channel]
+        self.kernels = kernels[:, self.channel]
 
     def loadNeurons(self, s: Spike, neurons):
         """
