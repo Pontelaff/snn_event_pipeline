@@ -11,13 +11,16 @@ class Event(Spike):
         super().__init__(x, y, t)
         self.channel = c
 
-    def toSpike(self):
+    def toSpike(self) -> Spike:
         return Spike(self.x_pos, self.y_pos, self.timestamp)
 
-class EventQueue(q.Queue):
+class EventQueue(q.Queue): # NOTE: PriorityQueue for rec?
     def __init__(self, layer: int, maxsize: int = 0) -> None:
         super().__init__(maxsize)
         self.layer = layer
+
+    def _get(self) -> Event:
+        return super()._get()
 
 
 # class Kernel:
