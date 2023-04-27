@@ -1,5 +1,6 @@
-from utils import Spike, Event, EventQueue
 import numpy as np
+from utils import Spike, Event, EventQueue
+from typing import List
 
 LEAK_RATE = 0.17
 U_RESET = 0
@@ -121,6 +122,8 @@ class Neurocore:
         This function performs the convolution operations for neurons neighbouring the current spike
         and one channel (specified by the neurocore) of each kernel. Each kernel will then apply the
         respective weights to a different channel of the current layer.
+
+        NOTE: multiply incoming current with (1 - leak)?
         """
         channels = len(self.neuronStatesConv)
         for c in range(channels):
@@ -128,14 +131,16 @@ class Neurocore:
                 for y in range(self.kernelSize):
                     self.neuronStatesConv[c, x, y, 0] += self.kernels[c, self.kernelSize-x-1, self.kernelSize-y-1]
 
-    def checkTreshold(self) -> EventQueue:
+    def checkTreshold(self) -> List[Event]:
         """
         This function checks if the neuron states exceed a threshold potential and resets them if they do, while
         also adding a spike event to a queue.
 
         @return an EventQueue object containing all spikes triggered by the incoming spike.
+
+        TODO: reset negative states?
         """
-        queue = EventQueue(self.layer)
+        events = []#EventQueue(self.layer)
         channels = len(self.neuronStatesConv)
         # self.neuronStatesConv.apply_(checkTresh()) Doesn't work because it's applied on both u and t
         for c in range(channels):
@@ -147,6 +152,7 @@ class Neurocore:
                         y_pos = self.spikeConv.y_pos + y -1
                         t = self.spikeConv.timestamp
                         if min(x_pos, y_pos) >= 0 and max(x_pos, y_pos <=31):
-                            queue.put(Event(x_pos, y_pos, t, c))
+                            events.append(Event(x_pos, y_pos, t, c))
+                            #queue.put(Event(x_pos, y_pos, t, c))
 
-        return queue
+        return events
