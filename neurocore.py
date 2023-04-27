@@ -91,6 +91,9 @@ class Neurocore:
         dimension represents the channel, the second and third dimensions represent the x and y
         positions of the neurons in the layer, the forth dimension contains the neuron states.
         """
+
+        # pad each channel with zeros (don't pad neuron states)
+        neurons = np.pad(neurons, ((0,0),(1,1),(1,1),(0,0)), 'constant')
         channels = len(neurons)
         # for each channel of current layer
         for c in range(channels):
