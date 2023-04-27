@@ -26,6 +26,24 @@ U_THRESH = 1
 #             return 0
 
 
+def applyLeak(u, t_last, t_now) -> np.array:
+        """
+        This function applies a leak to a neuron based on the time elapsed since the last
+        application of the leak.
+
+        @param u The neuron potential that is being modified by the leak rate.
+        @param t_last The time stamp of the last applied leak for this neuron.
+        @param t_now The timestamp of the current spike
+
+        @return a numpy array with two elements: the updated neuron potential
+        and the timestamp of the current spike `t_now`.
+        """
+        t_leak = t_now - t_last
+        leak = LEAK_RATE / t_leak
+        u = u * leak
+        return np.array([u, t_now], dtype=np.float16)
+
+
 class Neurocore:
 
     # member attributes
@@ -81,23 +99,6 @@ class Neurocore:
             self.neuronStatesLeak[c] = n
         self.spikeLeak = s
 
-    def applyLeak(self, u, t_last, t_now) -> np.array:
-        """
-        This function applies a leak to a neuron based on the time elapsed since the last
-        application of the leak.
-
-        @param u The neuron potential that is being modified by the leak rate.
-        @param t_last The time stamp of the last applied leak for this neuron.
-        @param t_now The timestamp of the current spike
-
-        @return a numpy array with two elements: the updated neuron potential
-        and the timestamp of the current spike `t_now`.
-        """
-        t_leak = t_now - t_last
-        leak = LEAK_RATE / t_leak
-        u = u * leak
-        return np.array([u, t_now], dtype=np.float16)
-
     def leakNeurons(self):
         """
         This function applies a leak to the neuron states and forwards the spike object to the next
@@ -110,7 +111,7 @@ class Neurocore:
                 for y in range(self.kernelSize):
                     u = self.neuronStatesLeak[c,x,y,0].item()
                     t_last = self.neuronStatesLeak[c,x,y,1].item()
-                    self.neuronStatesLeak[c, x, y] = self.applyLeak(u, t_last, self.spikeLeak.timestamp)
+                    self.neuronStatesLeak[c, x, y] = applyLeak(u, t_last, self.spikeLeak.timestamp)
         # forward spike and neurons to convolution step
         self.spikeConv = self.spikeLeak
         self.neuronStatesConv = self.neuronStatesLeak
