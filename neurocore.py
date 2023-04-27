@@ -1,5 +1,5 @@
 import numpy as np
-from utils import Spike, Event, EventQueue
+from utils import Spike, Event
 from typing import List
 
 LEAK_RATE = 0.17
@@ -40,8 +40,9 @@ def applyLeak(u, t_last, t_now) -> np.array:
         and the timestamp of the current spike `t_now`.
         """
         t_leak = t_now - t_last
-        leak = LEAK_RATE / t_leak
-        u = u * leak
+        if t_leak != 0:
+            leak = LEAK_RATE / t_leak
+            u = u * leak
         return np.array([u, t_now], dtype=np.float16)
 
 
