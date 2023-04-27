@@ -10,22 +10,41 @@ OUTPUT_CHANNELS = 2
 SEG_WIDTH = 32
 SEG_HEIGHT = 32
 
-class Layer:
-    def __init__(self, inChannels, inQueue, kernels, neurons, layer = 1) -> None:
-        numKernels = len(kernels)
-        kernelSize = len(kernels[0,0])
-        self.layer = layer
+class ConvLayer:
+    layer = None
+    recurrent = False
+
+    def __init__(self, inChannels, numKernels, kernelSize, neurons) -> None:
         self.neurons = neurons
         # generate neurocores
         self.neurocores = [Neurocore(c, numKernels, kernelSize) for c in range(inChannels)]
-        self.inQueue = inQueue
         self.outQueue = EventQueue(self.layer)
 
+    def assignLayer(self, layer, layerKernels, recurrence):
+        self.layer = layer
+        self.recurrent = recurrence
+        for nc in self.neurocores:
+            nc.assignLayer(self.layer, layerKernels)
+
+    def forward(self, inQueue : EventQueue) -> EventQueue:
+        while inQueue.qsize() > 0:
+            ev = inQueue._get()
+            c = ev.channel
+            s = ev.toSpike()
+            self.neurocores[c].loadNeurons(s, self.neurons)
+            self.neurocores[c].leakNeurons()
+            self.neurocores[c].applyKernel()
+            newEvents = self.neurocores[c].checkTreshold()
+            for item in newEvents:
+                self.outQueue.put(item)
+                # TODO: Recurrence
+
+        return self.outQueue
 
 
 # initialise neuron states
 inputNeurons = np.zeros([CONV_CHANNELS, SEG_WIDTH, SEG_HEIGHT, 2], dtype=np.float16)
-hiddenNeurons = np.zeros([6, CONV_CHANNELS, SEG_WIDTH, SEG_HEIGHT, 2], dtype=np.float16)
+hiddenNeurons = np.ones([6, CONV_CHANNELS, SEG_WIDTH, SEG_HEIGHT, 2], dtype=np.float16)
 outputNeurons = np.zeros([SEG_WIDTH, SEG_HEIGHT, 2], dtype=np.float16)
 
 # initialise kernel weights
@@ -40,9 +59,9 @@ outQueue = EventQueue(1)
 
 
 
-inputLayer = Layer(INPUT_CHANNELS, eventInput, inputKernels, inputNeurons, 0)
-convLayer = Layer(CONV_CHANNELS, inQueue, hiddenKernels[0], hiddenNeurons[0], 1)
-spike = Spike(0,0,12)
+inputLayer = ConvLayer(INPUT_CHANNELS, len(inputKernels), len(inputKernels[0]), inputNeurons, 0)
+convLayer = ConvLayer(CONV_CHANNELS, len(hiddenKernels[0]), len(hiddenKernels[0, 0]), hiddenNeurons[0], 1)
+spike = Spike(0,0,2)
 
 # pad each channel with zeros (don't pad neuron states)
 layer1Neurons = np.pad(hiddenNeurons[0], ((0,0),(1,1),(1,1),(0,0)), 'constant')
@@ -50,11 +69,11 @@ layer1Neurons = np.pad(hiddenNeurons[0], ((0,0),(1,1),(1,1),(0,0)), 'constant')
 # recognizable test values
 hiddenKernels[0,0,0,0] = [1,2,3]
 hiddenKernels[0,1,0,0] = [44,55,66]
-hiddenKernels[0,2,0,1] = [0,55,0]
+hiddenKernels[0,2,0,1] = [-55,55,-55]
 layer1Neurons[0,11,23:26] = [[0,1],[2,3],[55,10]]
 
 nc = Neurocore(0, CONV_CHANNELS, KERNEL_SIZE)
-nc.assignLayer(1, hiddenKernels)
+nc.assignLayer(1, hiddenKernels[0])
 nc.loadNeurons(spike, layer1Neurons)
 
 nc.leakNeurons()
