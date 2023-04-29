@@ -20,7 +20,7 @@ class ConvLayer:
             nc.assignLayer(self.layer, layerKernels)
 
     def forward(self, inQueue : EventQueue) -> EventQueue:
-        while inQueue.qsize() > 0:
+        for _ in range(inQueue.qsize()):
             ev = inQueue._get()
             c = ev.channel
             s = ev.toSpike()
@@ -31,5 +31,6 @@ class ConvLayer:
             for item in newEvents:
                 self.outQueue.put(item)
                 # TODO: Recurrence
+            inQueue.task_done()
 
         return self.outQueue
