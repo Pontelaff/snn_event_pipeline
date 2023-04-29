@@ -49,7 +49,6 @@ def applyLeak(u, t_last, t_now) -> np.array:
 class Neurocore:
 
     # member attributes
-    layer = None        # the currently active layer
     kernels = None      # 32*3*3 numpy array containing one channel each of 32 Kernels
     spikeLeak = None    # spike for neuron Leak step
     spikeConv = None    # spike for convolution step
@@ -68,16 +67,14 @@ class Neurocore:
         self.neuronStatesLeak = np.zeros([numKernels,kernelSize,kernelSize,2], dtype=np.float16) # numpy array containing neighbours of spiking neuron
         self.neuronStatesConv = self.neuronStatesLeak
 
-    def assignLayer(self, newLayer, kernels):
+    def assignLayer(self, kernels):
         """
         This function assigns a new layer and loads kernels for that layer based on the channel
         specified for the Neurocore.
 
-        @param newLayer The new layer that the Neurocore will be assigned to.
         @param kernels All kernals of the neural network layer as a numpy array
                 [Kernals, Channels, KSize, KSize]
         """
-        self.layer = newLayer-1
         # from active layer for all kernels load the designated channel
         self.kernels = kernels[:, self.channel]
 

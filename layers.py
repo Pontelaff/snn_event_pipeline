@@ -2,7 +2,7 @@ from utils import EventQueue
 from neurocore import Neurocore
 
 class ConvLayer:
-    layer = None
+    #layer = None
     recurrent = False
     neurons = None
 
@@ -10,14 +10,14 @@ class ConvLayer:
         #self.neurons = neurons
         # generate neurocores
         self.neurocores = [Neurocore(c, numKernels, kernelSize) for c in range(inChannels)]
-        self.outQueue = EventQueue(self.layer)
+        self.outQueue = EventQueue()
 
-    def assignLayer(self, layer, layerKernels, recurrence, neurons):
-        self.layer = layer
+    def assignLayer(self, layerKernels, recurrence, neurons):
+        #self.layer = layer
         self.neurons = neurons
         self.recurrent = recurrence
         for nc in self.neurocores:
-            nc.assignLayer(self.layer, layerKernels)
+            nc.assignLayer(layerKernels)
 
     def forward(self, inQueue : EventQueue) -> EventQueue:
         for _ in range(inQueue.qsize()):

@@ -23,9 +23,9 @@ hiddenKernels = np.random.rand(6, CONV_CHANNELS, CONV_CHANNELS, KERNEL_SIZE, KER
 outputKernels = np.random.rand(OUTPUT_CHANNELS, CONV_CHANNELS, CONV_CHANNELS, 1, 1).astype(np.float16)
 
 # initialise event queues
-eventInput = EventQueue(-1)
-inQueue = EventQueue(0)
-outQueue = EventQueue(1)
+eventInput = EventQueue()
+inQueue = EventQueue()
+outQueue = EventQueue()
 
 x = np.random.randint(0, SEG_WIDTH, INPUT_EVENTS)
 y = np.random.randint(0, SEG_HEIGHT, INPUT_EVENTS)
@@ -46,7 +46,7 @@ hiddenKernels[0,1,0,0] = [44,55,66]
 hiddenKernels[0,2,0,1] = [-55,55,-55]
 hiddenNeurons[0,0,11,23:26] = [[0,1],[2,3],[55,10]]
 
-convLayer.assignLayer(1, hiddenKernels[0], False, hiddenNeurons[0])
+convLayer.assignLayer(hiddenKernels[0], False, hiddenNeurons[0])
 outQ = convLayer.forward(eventInput)
 
 print("%d spikes in queue" %(outQ.qsize()))
