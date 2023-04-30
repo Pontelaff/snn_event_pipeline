@@ -134,10 +134,11 @@ class Neurocore:
 
     def checkTreshold(self) -> List[Event]:
         """
-        This function checks if the neuron states exceed a threshold potential and resets them if they do, while
-        also adding a spike event to a queue.
+        This function checks if the neuron states exceed a threshold potential, resets them if they do,
+        and adds a spike event to a queue.
 
-        @return an EventQueue object containing all spikes triggered by the incoming spike.
+        @return a tuple containing the updated neuron states and a list of spike events triggered by the
+        incoming spike.
 
         TODO: reset negative states?
         """
@@ -156,4 +157,4 @@ class Neurocore:
                             events.append(Event(x_pos, y_pos, t, c))
                             #queue.put(Event(x_pos, y_pos, t, c))
 
-        return events
+        return (self.neuronStatesConv, events)

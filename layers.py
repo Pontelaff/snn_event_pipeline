@@ -1,5 +1,5 @@
 from typing import List, Tuple
-from utils import EventQueue
+from utils import EventQueue, Spike
 from neurocore import Neurocore
 
 class ConvLayer:
@@ -22,6 +22,16 @@ class ConvLayer:
         for nc in self.neurocores:
             nc.assignLayer(layerKernels)
 
+    def updateNeurons(self, x, y, updatedNeurons):
+        # NOTE: needs to be adjusted for kernels with a size other then c*3*3
+        # determines if the spike occured at an edge of the channel
+        l = 1 if x > 0 else 0
+        r = 1 if x < len(self.neurons[0])-1 else 0
+        u = 1 if y > 0 else 0
+        d = 1 if y < len(self.neurons[0,0])-1 else 0
+
+        self.neurons[:, x-l:x+r+1, y-u:y+d+1] = updatedNeurons[:, 1-l:2+r, 1-u:2+d]
+
     def forward(self, recQueue : EventQueue) -> Tuple[List, EventQueue]:
         for _ in range(self.inQueue.qsize()):
             ev = self.inQueue._get()
@@ -30,7 +40,8 @@ class ConvLayer:
             self.neurocores[c].loadNeurons(s, self.neurons)
             self.neurocores[c].leakNeurons()
             self.neurocores[c].applyKernel()
-            newEvents = self.neurocores[c].checkTreshold()
+            (updatedNeurons, newEvents) = self.neurocores[c].checkTreshold()
+            self.updateNeurons(s.x_pos, s.y_pos, updatedNeurons)
             for item in newEvents:
                 self.outQueue.put(item)
                 # TODO: Recurrence
