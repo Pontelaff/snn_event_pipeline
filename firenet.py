@@ -5,6 +5,7 @@ from layers import ConvLayer
 
 KERNEL_SIZE = 3
 CONV_CHANNELS = 32
+KERNEL_NUM = CONV_CHANNELS
 HIDDEN_LAYERS = 6
 INPUT_CHANNELS = 2
 OUTPUT_CHANNELS = 2
@@ -18,8 +19,10 @@ hiddenNeurons = np.zeros([6, CONV_CHANNELS, SEG_WIDTH, SEG_HEIGHT, 2], dtype=np.
 outputNeurons = np.zeros([SEG_WIDTH, SEG_HEIGHT, 2], dtype=np.float16)
 
 # initialise kernel weights
-inputKernels = np.random.rand(CONV_CHANNELS, INPUT_CHANNELS, KERNEL_SIZE, KERNEL_SIZE).astype(np.float16)*0.5
-hiddenKernels = np.random.rand(6, CONV_CHANNELS, CONV_CHANNELS, KERNEL_SIZE, KERNEL_SIZE).astype(np.float16)*0.5
+inputKernels = np.random.rand(KERNEL_NUM, INPUT_CHANNELS, KERNEL_SIZE, KERNEL_SIZE).astype(np.float16)-0.3
+hiddenKernels = np.random.rand(6, KERNEL_NUM, CONV_CHANNELS, KERNEL_SIZE, KERNEL_SIZE).astype(np.float16)-0.45
+#hiddenKernels[0] *= 0.5
+#hiddenKernels[1:] *= 0.0
 outputKernels = np.random.rand(OUTPUT_CHANNELS, CONV_CHANNELS, CONV_CHANNELS, 1, 1).astype(np.float16)*0.5
 
 # initialise event queues

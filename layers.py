@@ -43,7 +43,6 @@ class ConvLayer:
         for nc in self.neurocores:
             nc.assignLayer(layerKernels)
 
-
     def updateNeurons(self, x, y, updatedNeurons):
         """
         This function writes back the neurons updated by the neurocore to the current layer
@@ -63,6 +62,17 @@ class ConvLayer:
 
         self.neurons[:, x-l:x+r+1, y-u:y+d+1] = updatedNeurons[:, 1-l:2+r, 1-u:2+d]
 
+    def generateSpikes(self):
+        """
+        This function applies the threshold check for all neurons of each channel and adds resulting
+        events to the output queue.
+        """
+        for nc in range(len(self.neurocores)):
+            (self.neurons[nc], newEvents) = self.neurocores[nc].checkTreshold(self.neurons[nc])
+            for item in newEvents:
+                self.outQueue.put(item)
+                # TODO: Recurrence
+
     def forward(self, recQueue : EventQueue) -> Tuple[List, EventQueue]:
         """
         This function processes events from an input queue, updates neurons, and generates new events
@@ -73,18 +83,21 @@ class ConvLayer:
 
         @return a tuple containing a list of neurons states and an event queue.
         """
+        t = 0
+
         for _ in range(self.inQueue.qsize()):
             ev = self.inQueue._get()
             c = ev.channel
             s = ev.toSpike()
+            if t < s.timestamp:
+                # next timestamps, generate Spikes for last timestamp
+                self.generateSpikes()
+                t = s.timestamp
+
+            self.inQueue.task_done()
             self.neurocores[c].loadNeurons(s, self.neurons)
             self.neurocores[c].leakNeurons()
-            self.neurocores[c].applyKernel()
-            (updatedNeurons, newEvents) = self.neurocores[c].checkTreshold()
+            updatedNeurons = self.neurocores[c].applyConv()
             self.updateNeurons(s.x_pos, s.y_pos, updatedNeurons)
-            for item in newEvents:
-                self.outQueue.put(item)
-                # TODO: Recurrence
-            self.inQueue.task_done()
 
         return (self.neurons, self.outQueue)

@@ -1,6 +1,6 @@
 import numpy as np
 from utils import Spike, Event
-from typing import List
+from typing import List, Tuple
 
 LEAK_RATE = 0.17
 U_RESET = 0
@@ -118,7 +118,7 @@ class Neurocore:
         self.spikeConv = self.spikeLeak
         self.neuronStatesConv = self.neuronStatesLeak
 
-    def applyKernel(self):
+    def applyConv(self):
         """
         This function performs the convolution operations for neurons neighbouring the current spike
         and one channel (specified by the neurocore) of each kernel. Each kernel will then apply the
@@ -132,29 +132,27 @@ class Neurocore:
                 for y in range(self.kernelSize):
                     self.neuronStatesConv[c, x, y, 0] += self.kernels[c, self.kernelSize-x-1, self.kernelSize-y-1]
 
-    def checkTreshold(self) -> List[Event]:
+        return self.neuronStatesConv
+
+    def checkTreshold(self, neurons) -> Tuple[List, List[Event]]:
         """
         This function checks if the neuron states exceed a threshold potential, resets them if they do,
         and adds a spike event to a queue.
 
-        @return a tuple containing the updated neuron states and a list of spike events triggered by the
+        @param neurons A list of all neurons for the channel of this neurocore.
+        @return A tuple containing the updated neuron states and a list of spike events triggered by the
         incoming spike.
 
+        NOTE: Technically doesn't need to be part of the class, but will be performed by the Neurocore in
+        Hardware.
         TODO: reset negative states?
         """
-        events = []#EventQueue(self.layer)
-        channels = len(self.neuronStatesConv)
-        # self.neuronStatesConv.apply_(checkTresh()) Doesn't work because it's applied on both u and t
-        for c in range(channels):
-            for x in range(self.kernelSize):
-                for y in range(self.kernelSize):
-                    if self.neuronStatesConv[c, x, y, 0] > U_THRESH:
-                        self.neuronStatesConv[c, x, y, 0] = U_RESET
-                        x_pos = self.spikeConv.x_pos + x -1
-                        y_pos = self.spikeConv.y_pos + y -1
-                        t = self.spikeConv.timestamp
-                        if min(x_pos, y_pos) >= 0 and max(x_pos, y_pos <=31):
-                            events.append(Event(x_pos, y_pos, t, c))
-                            #queue.put(Event(x_pos, y_pos, t, c))
+        events = []
+        for x in range(len(neurons)):
+            for y in range(len(neurons[0])):
+                if neurons[x, y, 0] > U_THRESH:
+                    neurons[x, y, 0] = U_RESET
+                    t = neurons[x, y, 1]
+                    events.append(Event(x, y, t, self.channel))
 
-        return (self.neuronStatesConv, events)
+        return (neurons, events)
