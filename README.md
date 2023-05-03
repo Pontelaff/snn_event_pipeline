@@ -1,18 +1,3 @@
-# SNN Sandbox
+# SNN Prototype
 
-This projects purpose is to gather experience with Spiking Neural Networks in pyTorch.
-
-## Table of contents
-
-- [Frameworks](#frameworks)
-  - [PyTorch](#pytorch)
-  - [snnTorch](#snntorch)
-  - [BindsNET](#bindsnet)
-
-## Frameworks
-
-### PyTorch
-
-### snnTorch
-
-### BindsNET
+This projects purpose is to develop a working software solution, which is architecturally eqiuvalent to the hadware implementation.
