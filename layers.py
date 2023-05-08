@@ -66,6 +66,17 @@ class ConvLayer:
         """
         This function applies the threshold check for all neurons of each channel and adds resulting
         events to the output queue.
+
+        NOTE: There are two other alternatives, which check thresholds and generate spikes with each
+        incoming spike. However, measures must be taken to prohibit spiking during the same and
+        potentially following timestamps (depending on refractory time).
+        This can be done by:
+        1. Marking spiked neurons with a flag or counter. This might improve performance but increases
+        the amount of data stored and transmitted.
+        2. Skipping the convolution step, if the timestamp is up to date (or within refractory period)
+        and the membrane potential is at reset value, indicating a spike just occured. For that to work,
+        leaks (and therefore timestamp updates) can not be applied to neurons already at reset potential,
+        which also means that timestamps then need be updated at threshold check.
         """
         for nc in range(len(self.neurocores)):
             (self.neurons[nc], newEvents) = self.neurocores[nc].checkTreshold(self.neurons[nc])
