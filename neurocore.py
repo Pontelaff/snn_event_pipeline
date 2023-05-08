@@ -27,23 +27,25 @@ U_THRESH = 1
 #             return 0
 
 
-def applyLeak(u, t_last, t_now) -> np.array:
+def applyLeak(neuron : ArrayLike, t_now) -> ArrayLike:
         """
         This function applies a leak to a neuron based on the time elapsed since the last
         application of the leak.
 
-        @param u The neuron potential that is being modified by the leak rate.
-        @param t_last The time stamp of the last applied leak for this neuron.
+        @param u The neuron that is being modified by the leak rate as an array containaing
+        the membrane potential and the timestamp of the last leak in this order.
         @param t_now The timestamp of the current spike
 
-        @return a numpy array with two elements: the updated neuron potential
-        and the timestamp of the current spike `t_now`.
+        @return The modified neuron array.
+
+        TODO: Timestamp update might need to be done at threshold check.
         """
-        t_leak = t_now - t_last
-        if t_leak != 0:
+        t_leak = t_now - neuron[1]
+        if t_leak*neuron[0] != 0:
             leak = LEAK_RATE / t_leak
-            u = u * leak
-        return np.array([u, t_now], dtype=np.float16)
+            neuron = [neuron[0]*leak, t_now]
+
+        return neuron
 
 
 class Neurocore:
@@ -111,6 +113,11 @@ class Neurocore:
         for c in range(channels):
             for x in range(self.kernelSize):
                 for y in range(self.kernelSize):
+                    self.neuronStatesLeak[c, x, y] = applyLeak(self.neuronStatesLeak[c,x,y], self.spikeLeak.timestamp)
+        # forward spike and neurons to convolution step
+        self.spikeConv = self.spikeLeak
+        self.neuronStatesConv = self.neuronStatesLeak
+
                     u = self.neuronStatesLeak[c,x,y,0].item()
                     t_last = self.neuronStatesLeak[c,x,y,1].item()
                     self.neuronStatesLeak[c, x, y] = applyLeak(u, t_last, self.spikeLeak.timestamp)
