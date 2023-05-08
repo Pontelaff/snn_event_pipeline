@@ -1,6 +1,7 @@
 import numpy as np
 from utils import Spike, Event
 from typing import List, Tuple
+from numpy.typing import ArrayLike
 
 LEAK_RATE = 0.17
 U_RESET = 0
@@ -125,19 +126,27 @@ class Neurocore:
         self.spikeConv = self.spikeLeak
         self.neuronStatesConv = self.neuronStatesLeak
 
-    def applyConv(self):
+    def applyConv(self, recurrent = False) -> ArrayLike:
         """
         This function performs the convolution operations for neurons neighbouring the current spike
         and one channel (specified by the neurocore) of each kernel. Each kernel will then apply the
         respective weights to a different channel of the current layer.
 
+        @param recurrent A boolean parameter that indicates whether the convolution operation is being
+        performed for a recurrent spike or not. If it is True, then the recurrent kernels will
+        be used instead of the regular kernels.
+
+        @return The updated neuron states array after performing the convolution operation.
+
         NOTE: multiply incoming current with (1 - leak)?
         """
+        inCurrentLeak = (1-LEAK_RATE)
+        kernels = self.recKernels if recurrent else self.kernels
         channels = len(self.neuronStatesConv)
         for c in range(channels):
-            for x in range(self.kernelSize):
-                for y in range(self.kernelSize):
-                    self.neuronStatesConv[c, x, y, 0] += self.kernels[c, self.kernelSize-x-1, self.kernelSize-y-1]
+            kernel = kernels[c]
+            flipped = np.flip(np.flip(kernel, axis=0), axis=1)
+            self.neuronStatesConv[c,:,:,0] += np.flip(np.flip(kernels[c], axis=0), axis=1)#*inCurrentLeak
 
         return self.neuronStatesConv
 
