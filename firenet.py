@@ -28,14 +28,10 @@ outputKernels = np.random.rand(OUTPUT_CHANNELS, CONV_CHANNELS, CONV_CHANNELS, 1,
 # initialise event queues
 eventInput = EventQueue()
 
-x = np.random.randint(0, SEG_WIDTH, INPUT_EVENTS)
-y = np.random.randint(0, SEG_HEIGHT, INPUT_EVENTS)
-c = np.random.randint(0, 2, INPUT_EVENTS) # polarity
-t = 0
-
-for i in range(INPUT_EVENTS):
-    t += np.random.rand()*0.25
-    eventInput.put(Event(x[i], y[i], t//1, c[i]))
+# slider
+for i in range(SEG_HEIGHT*(SEG_WIDTH-1)):
+    eventInput.put(Event(i//SEG_HEIGHT, i%SEG_HEIGHT, i//SEG_HEIGHT, 0))
+    eventInput.put(Event(i//SEG_HEIGHT+1, i%SEG_HEIGHT, i//SEG_HEIGHT, 1))
 
 # recognizable test values
 #hiddenKernels[0,0,0,0] = [1,2,3]
