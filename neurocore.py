@@ -97,11 +97,9 @@ class Neurocore:
         neurons = np.pad(neurons, ((0,0),(1,1),(1,1),(0,0)), 'constant')
         channels = len(neurons)
         # for each channel of current layer
-        for c in range(channels):
-            # load neuron states neighbouring spike coordinates
-            # start pos-1 stop pos+2 and increment by 1 to account for padding
-            n = neurons[c, s.x_pos:s.x_pos+3, s.y_pos:s.y_pos+3]
-            self.neuronStatesLeak[c] = n
+        # load neuron states neighbouring spike coordinates
+        # start pos-1 stop pos+2 and increment by 1 to account for padding
+        self.neuronStatesLeak = neurons[:, s.x_pos:s.x_pos+3, s.y_pos:s.y_pos+3]
         self.spikeLeak = s
 
     def leakNeurons(self):
