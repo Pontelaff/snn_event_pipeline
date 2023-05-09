@@ -116,9 +116,7 @@ class Neurocore:
         """
         inCurrentLeak = (1-LEAK_RATE)
         kernels = self.recKernels if recurrent else self.kernels
-        channels = len(self.neuronStatesConv)
-        for c in range(channels):
-            self.neuronStatesConv[c,:,:,0] += np.flip(np.flip(kernels[c], axis=0), axis=1)#*inCurrentLeak
+        self.neuronStatesConv[:,:,:,0] += np.flip(np.flip(kernels, axis=1), axis=2)#*inCurrentLeak
 
         return self.neuronStatesConv
 
