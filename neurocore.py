@@ -7,46 +7,29 @@ LEAK_RATE = 0.17
 U_RESET = 0
 U_THRESH = 1
 
-# class LIFNeuron:
-#     def __init__(self, u_init, t_last) -> None:
-#         # membrane potential
-#         self.u = u_init
-#         # timestamp of last leak
-#         self.t_last = t_last
 
-#     def applyLeak(self, t_now):
-#         t_leak = t_now - self.last_last
-#         leak = LEAK_RATE / t_leak
-#         self.u = self.u * leak
-#         self.last_last = t_now
+def applyLeak(u, t_last, t_now) -> Tuple:
+    """
+    This function applies a leak to a neuron based on the time elapsed since the last
+    application of the leak.
 
-#     def checkThreshold(self):
-#         if (self.u > U_THRESH):
-#             self.u = U_RESET
-#             return 1
-#         else:
-#             return 0
+    @param u The membrane potential of the neuron that is being modified by the leak rate.
+    @param t_last The timestamp of the last update for this neuron.
+    @param t_now The timestamp of the incoming spike.
 
+    @return A tuple containing the updated neuron state.
 
-def applyLeak(neuron : ArrayLike, t_now) -> ArrayLike:
-        """
-        This function applies a leak to a neuron based on the time elapsed since the last
-        application of the leak.
+    NOTE: This might be optimised further
+    TODO: Timestamp update might need to be done at threshold check.
+    """
+    t_leak = t_now - t_last
+    # leak neuron if timestamps are different and potential is not zero
+    if t_leak*u != 0:
+        leak = LEAK_RATE / t_leak
+        u = u*leak
+        t_last = t_now
 
-        @param u The neuron that is being modified by the leak rate as an array containaing
-        the membrane potential and the timestamp of the last leak in this order.
-        @param t_now The timestamp of the current spike
-
-        @return The modified neuron array.
-
-        TODO: Timestamp update might need to be done at threshold check.
-        """
-        t_leak = t_now - neuron[1]
-        if t_leak*neuron[0] != 0:
-            leak = LEAK_RATE / t_leak
-            neuron = [neuron[0]*leak, t_now]
-
-        return neuron
+    return (u, t_last)
 
 
 class Neurocore:
@@ -107,19 +90,12 @@ class Neurocore:
         This function applies a leak to the neuron states and forwards the spike object to the next
         pipline step performing the convolution.
         """
-        channels = len(self.neuronStatesLeak)
-        # self.neuronStates.apply_(applyLeak()) Doesn't work because it's applied on both u and t
-        for c in range(channels):
-            for x in range(self.kernelSize):
-                for y in range(self.kernelSize):
-                    self.neuronStatesLeak[c, x, y] = applyLeak(self.neuronStatesLeak[c,x,y], self.spikeLeak.timestamp)
-        # forward spike and neurons to convolution step
-        self.spikeConv = self.spikeLeak
-        self.neuronStatesConv = self.neuronStatesLeak
-
-                    u = self.neuronStatesLeak[c,x,y,0].item()
-                    t_last = self.neuronStatesLeak[c,x,y,1].item()
-                    self.neuronStatesLeak[c, x, y] = applyLeak(u, t_last, self.spikeLeak.timestamp)
+        leakFunc = np.vectorize(applyLeak, otypes=[np.float16, np.int16])
+        u = self.neuronStatesLeak[:,:,:,0]
+        t = self.neuronStatesLeak[:,:,:,1]
+        updated_neurons = leakFunc(u, t, self.spikeLeak.timestamp)
+        self.neuronStatesLeak[:,:,:,0] = updated_neurons[0]
+        self.neuronStatesLeak[:,:,:,1] = updated_neurons[1]
         # forward spike and neurons to convolution step
         self.spikeConv = self.spikeLeak
         self.neuronStatesConv = self.neuronStatesLeak
@@ -142,13 +118,11 @@ class Neurocore:
         kernels = self.recKernels if recurrent else self.kernels
         channels = len(self.neuronStatesConv)
         for c in range(channels):
-            kernel = kernels[c]
-            flipped = np.flip(np.flip(kernel, axis=0), axis=1)
             self.neuronStatesConv[c,:,:,0] += np.flip(np.flip(kernels[c], axis=0), axis=1)#*inCurrentLeak
 
         return self.neuronStatesConv
 
-    def checkTreshold(self, neurons) -> Tuple[List, List[Event]]:
+    def checkTreshold(self, neurons : ArrayLike) -> Tuple[ArrayLike, List[Event]]:
         """
         This function checks if the neuron states exceed a threshold potential, resets them if they do,
         and adds a spike event to a queue.
@@ -166,7 +140,7 @@ class Neurocore:
             for y in range(len(neurons[0])):
                 if neurons[x, y, 0] > U_THRESH:
                     neurons[x, y, 0] = U_RESET
-                    t = neurons[x, y, 1]
+                    t = neurons[x, y, 1].item()
                     events.append(Event(x, y, t, self.channel))
 
         return (neurons, events)
