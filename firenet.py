@@ -2,6 +2,7 @@ import numpy as np
 from utils import Event, EventQueue
 from layers import ConvLayer
 from timeit import timeit
+import copy as cp
 
 
 KERNEL_SIZE = 3
@@ -15,21 +16,13 @@ SEG_HEIGHT = 32
 INPUT_EVENTS = 1000
 
 
-# initialise event queues
-eventInput = EventQueue()
-
-# slider
-for i in range(SEG_HEIGHT//4*(SEG_WIDTH-1)):
-    eventInput.put(Event(i//SEG_HEIGHT, i%SEG_HEIGHT, i//SEG_HEIGHT, 0))
-    eventInput.put(Event(i//SEG_HEIGHT+1, i%SEG_HEIGHT, i//SEG_HEIGHT, 1))
-
 # recognizable test values
 #hiddenKernels[0,0,0,0] = [1,2,3]
 #hiddenKernels[0,1,0,0] = [44,55,66]
 #hiddenKernels[0,2,0,1] = [-55,55,-55]
 #hiddenNeurons[0,0,11,23:26] = [[0,1],[2,3],[55,10]]
 
-def inference(eventInput):
+def inference():
 
     rng = np.random.default_rng(12)
 
@@ -47,6 +40,14 @@ def inference(eventInput):
     inputLayer = ConvLayer(2, len(hiddenKernels[0]), len(hiddenKernels[0, 0, 0]))
     convLayer = ConvLayer(CONV_CHANNELS, len(hiddenKernels[0]), len(hiddenKernels[0, 0, 0]))
 
+    # initialise event queues
+    eventInput = EventQueue()
+
+    # slider
+    for i in range(SEG_HEIGHT//4*(SEG_WIDTH-1)):
+        eventInput.put(Event(i//SEG_HEIGHT, i%SEG_HEIGHT, i//SEG_HEIGHT, 0))
+        eventInput.put(Event(i//SEG_HEIGHT+1, i%SEG_HEIGHT, i//SEG_HEIGHT, 1))
+
     inputLayer.assignLayer(eventInput, inputKernels, inputNeurons, False)
     inputNeurons , ffQ = inputLayer.forward(None)
     print("%d spikes in input layer" %(ffQ.qsize()))
@@ -56,8 +57,9 @@ def inference(eventInput):
         hiddenNeurons[l], ffQ = convLayer.forward(None)
         print("%d spikes in layer %d" %(ffQ.qsize(), l+1))
 
-time = timeit(lambda: inference(eventInput), number=5)
-print(f"Time: {time:.6f}")
+runs = 5
+time = timeit(lambda: inference(), number=runs)
+print(f"Time: {time/runs:.6f}")
 
 #print(" c  x  y  t")
 # while outQ.qsize() > 0:
