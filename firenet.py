@@ -1,5 +1,5 @@
 import numpy as np
-from utils import Event, EventQueue
+from utils import Spike
 from layers import ConvLayer
 from timeit import timeit
 
@@ -12,7 +12,6 @@ INPUT_CHANNELS = 2
 OUTPUT_CHANNELS = 2
 SEG_WIDTH = 32
 SEG_HEIGHT = 32
-INPUT_EVENTS = 1000
 
 #Random number generator
 rng = np.random.default_rng(12)
@@ -26,13 +25,9 @@ inputKernels = rng.random((KERNEL_NUM, INPUT_CHANNELS, KERNEL_SIZE, KERNEL_SIZE)
 hiddenKernels = rng.random((6, KERNEL_NUM, CONV_CHANNELS, KERNEL_SIZE, KERNEL_SIZE)).astype(np.float16)-0.5
 outputKernels = rng.random((OUTPUT_CHANNELS, CONV_CHANNELS, CONV_CHANNELS, 1, 1)).astype(np.float16)*0.5
 
-# initialise event queue
-eventInput = EventQueue()
+# initialise event queue as slider
+eventInput = [Spike(i//SEG_HEIGHT+j, i%SEG_HEIGHT, j, i//SEG_HEIGHT) for i in range(SEG_HEIGHT*(SEG_WIDTH-1)//4) for j in range(INPUT_CHANNELS)]
 
-# slider
-for i in range(SEG_HEIGHT*(SEG_WIDTH-1)//4):
-    eventInput.put(Event(i//SEG_HEIGHT, i%SEG_HEIGHT, i//SEG_HEIGHT, 0))
-    eventInput.put(Event(i//SEG_HEIGHT+1, i%SEG_HEIGHT, i//SEG_HEIGHT, 1))
 
 def inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels, eventInput):
     # init layers
@@ -41,14 +36,14 @@ def inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels, eventInp
 
     inputLayer.assignLayer(eventInput, inputKernels, inputNeurons, False)
     inputNeurons , ffQ = inputLayer.forward()
-    print("%d spikes in input layer" %(ffQ.qsize()))
-    num_spikes = ffQ.qsize()
+    print("%d spikes in input layer" %(len(ffQ)))
+    num_spikes = len(ffQ)
 
     for l in range(HIDDEN_LAYERS):
         convLayer.assignLayer(ffQ, hiddenKernels[l], hiddenNeurons[l], False)
         hiddenNeurons[l], ffQ = convLayer.forward()
-        print("%d spikes in layer %d" %(ffQ.qsize(), l+1))
-        num_spikes += ffQ.qsize()
+        print("%d spikes in layer %d" %(len(ffQ), l+1))
+        num_spikes += len(ffQ)
 
     return num_spikes
 

@@ -1,11 +1,10 @@
 from typing import List, Tuple
-from utils import EventQueue, Spike
+from utils import SpikeQueue
 from neurocore import Neurocore
 # The ConvLayer class defines a convolutional layer with neurocores that can apply kernels to input
 # spikes and generate output spikes.
 
 class ConvLayer:
-    #layer = None
     recurrent = False
     neurons = None
     outQueue = None
@@ -24,11 +23,11 @@ class ConvLayer:
         # generate neurocores
         self.neurocores = [Neurocore(c, numKernels, kernelSize) for c in range(inChannels)]
 
-    def assignLayer(self, inQueue : EventQueue, layerKernels, neurons, recurrence):
+    def assignLayer(self, inQueue : SpikeQueue, layerKernels, neurons, recurrence):
         """
         This function assigns a new layer to a set of neurocores with specified kernels, and neurons.
 
-        @param inQueue An EventQueue object that represents the input queue for the layer.
+        @param inQueue A List containing Spike tuples representing the input queue for the layer.
         @param layerKernels This parameter is a list of kernel objects that represent the computation to
         be performed by each neurocore in the layer. Each neurocore will be assigned one channel of each
         kernel from this list.
@@ -37,7 +36,7 @@ class ConvLayer:
         """
 
         self.inQueue = inQueue
-        self.outQueue = EventQueue()
+        self.outQueue = []
         self.neurons = neurons
         self.recurrent = recurrence
         for nc in self.neurocores:
@@ -80,16 +79,15 @@ class ConvLayer:
         """
         for nc in range(len(self.neurocores)):
             (self.neurons[nc], newEvents) = self.neurocores[nc].checkThreshold(self.neurons[nc])
-            for item in newEvents:
-                self.outQueue.put(item)
-                # TODO: Recurrence
+            self.outQueue.extend(newEvents)
+            # TODO: Recurrence
 
-    def forward(self, recQueue : EventQueue) -> Tuple[List, EventQueue]:
+    def forward(self, recQueue : SpikeQueue = None) -> Tuple[List, SpikeQueue]:
         """
         This function processes events from an input queue, updates neurons, and generates new events
         for an output queue.
 
-        @param recQueue The recQueue parameter is an EventQueue object that represents the queue of
+        @param recQueue The recQueue parameter is an SpikeQueue list object that represents the queue of
         events that need to be processed recursively.
 
         @return a tuple containing a list of neurons states and an event queue.
@@ -97,10 +95,9 @@ class ConvLayer:
         #TODO t musst be timestamp of last incoming spike for the layer
         t = 0
 
-        for _ in range(self.inQueue.qsize()):
-            ev = self.inQueue._get()
-            c = ev.channel
-            s = ev.toSpike()
+        for _ in range(len(self.inQueue)):
+            s = self.inQueue.pop(0)
+            c = s.channel
             if t < s.timestamp:
                 # next timestamps, generate Spikes for last timestamp
                 self.generateSpikes()

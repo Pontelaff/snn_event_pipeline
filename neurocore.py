@@ -1,6 +1,6 @@
 import numpy as np
-from utils import Spike, Event
-from typing import List, Tuple
+from utils import Spike, SpikeQueue
+from typing import Tuple
 from numpy.typing import ArrayLike
 
 LEAK_RATE = 0.17
@@ -34,6 +34,7 @@ class Neurocore:
 
     # member attributes
     kernels = None      # 32*3*3 numpy array containing one channel each of 32 Kernels
+    recKernels = None
     spikeLeak = None    # spike for neuron Leak step
     spikeConv = None    # spike for convolution step
 
@@ -117,7 +118,7 @@ class Neurocore:
 
         return self.neuronStatesConv
 
-    def checkThreshold(self, neurons : ArrayLike) -> Tuple[ArrayLike, List[Event]]:
+    def checkThreshold(self, neurons : ArrayLike) -> Tuple[ArrayLike, SpikeQueue]:
         """
         This function checks if the neuron states exceed a threshold potential, resets them if they do,
         and adds a spike event to a queue.
@@ -135,6 +136,6 @@ class Neurocore:
         # Reset potential of all exceeded neurons
         neurons[:,:,0][exceed_indices] = U_RESET
         # Extract the timestamps of exceeded neurons and create corresponding events
-        events = [Event(x, y, neurons[x, y, 1].item(), self.channel) for x, y in zip(*exceed_indices)]
+        events = [Spike(x, y, self.channel, neurons[x, y, 1].item()) for x, y in zip(*exceed_indices)]
 
         return neurons, events
