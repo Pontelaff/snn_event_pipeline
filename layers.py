@@ -79,7 +79,7 @@ class ConvLayer:
         which also means that timestamps then need be updated at threshold check.
         """
         for nc in range(len(self.neurocores)):
-            (self.neurons[nc], newEvents) = self.neurocores[nc].checkTreshold(self.neurons[nc])
+            (self.neurons[nc], newEvents) = self.neurocores[nc].checkThreshold(self.neurons[nc])
             for item in newEvents:
                 self.outQueue.put(item)
                 # TODO: Recurrence

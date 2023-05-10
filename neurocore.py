@@ -117,7 +117,7 @@ class Neurocore:
 
         return self.neuronStatesConv
 
-    def checkTreshold(self, neurons : ArrayLike) -> Tuple[ArrayLike, List[Event]]:
+    def checkThreshold(self, neurons : ArrayLike) -> Tuple[ArrayLike, List[Event]]:
         """
         This function checks if the neuron states exceed a threshold potential, resets them if they do,
         and adds a spike event to a queue.
@@ -130,12 +130,11 @@ class Neurocore:
         Hardware.
         TODO: reset negative states?
         """
-        events = []
-        for x in range(len(neurons)):
-            for y in range(len(neurons[0])):
-                if neurons[x, y, 0] > U_THRESH:
-                    neurons[x, y, 0] = U_RESET
-                    t = neurons[x, y, 1].item()
-                    events.append(Event(x, y, t, self.channel))
+        # Get indices of all neurons that exceed U_THRESH
+        exceed_indices = np.where(neurons[:,:,0] > U_THRESH)
+        # Reset potential of all exceeded neurons
+        neurons[:,:,0][exceed_indices] = U_RESET
+        # Extract the timestamps of exceeded neurons and create corresponding events
+        events = [Event(x, y, neurons[x, y, 1].item(), self.channel) for x, y in zip(*exceed_indices)]
 
-        return (neurons, events)
+        return neurons, events
