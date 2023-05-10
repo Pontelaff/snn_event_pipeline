@@ -13,17 +13,17 @@ SEG_WIDTH = 32
 SEG_HEIGHT = 32
 INPUT_EVENTS = 1000
 
+#Random number generator
+rng = np.random.default_rng(12)
 # initialise neuron states
 inputNeurons = np.zeros([CONV_CHANNELS, SEG_WIDTH, SEG_HEIGHT, 2], dtype=np.float16)
 hiddenNeurons = np.zeros([6, CONV_CHANNELS, SEG_WIDTH, SEG_HEIGHT, 2], dtype=np.float16)
 outputNeurons = np.zeros([SEG_WIDTH, SEG_HEIGHT, 2], dtype=np.float16)
 
 # initialise kernel weights
-inputKernels = np.random.rand(KERNEL_NUM, INPUT_CHANNELS, KERNEL_SIZE, KERNEL_SIZE).astype(np.float16)-0.3
-hiddenKernels = np.random.rand(6, KERNEL_NUM, CONV_CHANNELS, KERNEL_SIZE, KERNEL_SIZE).astype(np.float16)-0.45
-#hiddenKernels[0] *= 0.5
-#hiddenKernels[1:] *= 0.0
-outputKernels = np.random.rand(OUTPUT_CHANNELS, CONV_CHANNELS, CONV_CHANNELS, 1, 1).astype(np.float16)*0.5
+inputKernels = rng.random((KERNEL_NUM, INPUT_CHANNELS, KERNEL_SIZE, KERNEL_SIZE)).astype(np.float16)-0.48
+hiddenKernels = rng.random((6, KERNEL_NUM, CONV_CHANNELS, KERNEL_SIZE, KERNEL_SIZE)).astype(np.float16)-0.5
+outputKernels = rng.random((OUTPUT_CHANNELS, CONV_CHANNELS, CONV_CHANNELS, 1, 1)).astype(np.float16)*0.5
 
 # initialise event queues
 eventInput = EventQueue()
