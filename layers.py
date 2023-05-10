@@ -1,14 +1,16 @@
 from typing import List, Tuple
 from utils import SpikeQueue
 from neurocore import Neurocore
+
+
 # The ConvLayer class defines a convolutional layer with neurocores that can apply kernels to input
 # spikes and generate output spikes.
-
 class ConvLayer:
     recurrent = False
     neurons = None
     outQueue = None
     inQueue = None
+    t = 0
 
     def __init__(self, inChannels, numKernels, kernelSize) -> None:
         """
@@ -23,7 +25,7 @@ class ConvLayer:
         # generate neurocores
         self.neurocores = [Neurocore(c, numKernels, kernelSize) for c in range(inChannels)]
 
-    def assignLayer(self, inQueue : SpikeQueue, layerKernels, neurons, recurrence):
+    def assignLayer(self, inQueue : SpikeQueue, layerKernels, neurons, t_last, recurrence):
         """
         This function assigns a new layer to a set of neurocores with specified kernels, and neurons.
 
@@ -34,10 +36,10 @@ class ConvLayer:
         @param neurons A set of neuron states of the new layer
         @param recurrence A boolean value indicating whether the layer has recurrent connections or not.
         """
-
         self.inQueue = inQueue
         self.outQueue = []
         self.neurons = neurons
+        self.t = t_last
         self.recurrent = recurrence
         for nc in self.neurocores:
             nc.assignLayer(layerKernels)
@@ -90,22 +92,21 @@ class ConvLayer:
         @param recQueue The recQueue parameter is an SpikeQueue list object that represents the queue of
         events that need to be processed recursively.
 
-        @return a tuple containing a list of neurons states and an event queue.
+        @return a tuple containing a list of neurons states, an event queue and the timestamp of the last update
         """
         #TODO t musst be timestamp of last incoming spike for the layer
-        t = 0
 
         for _ in range(len(self.inQueue)):
             s = self.inQueue.pop(0)
             c = s.channel
-            if t < s.timestamp:
+            if self.t < s.timestamp:
                 # next timestamps, generate Spikes for last timestamp
                 self.generateSpikes()
-                t = s.timestamp
+                self.t = s.timestamp
 
             self.neurocores[c].loadNeurons(s, self.neurons)
             self.neurocores[c].leakNeurons()
-            updatedNeurons = self.neurocores[c].applyConv(t)
+            updatedNeurons = self.neurocores[c].applyConv(self.t)
             self.updateNeurons(s.x_pos, s.y_pos, updatedNeurons)
 
-        return (self.neurons, self.outQueue)
+        return self.neurons, self.outQueue, self.t

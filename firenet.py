@@ -28,20 +28,20 @@ outputKernels = rng.random((OUTPUT_CHANNELS, CONV_CHANNELS, CONV_CHANNELS, 1, 1)
 # initialise event queue as slider
 eventInput = [Spike(i//SEG_HEIGHT+j, i%SEG_HEIGHT, j, i//SEG_HEIGHT) for i in range(SEG_HEIGHT*(SEG_WIDTH-1)//4) for j in range(INPUT_CHANNELS)]
 
-
+layerTimestamps = np.zeros(8)
 def inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels, eventInput):
     # init layers
     inputLayer = ConvLayer(2, len(hiddenKernels[0]), len(hiddenKernels[0, 0, 0]))
     convLayer = ConvLayer(CONV_CHANNELS, len(hiddenKernels[0]), len(hiddenKernels[0, 0, 0]))
 
-    inputLayer.assignLayer(eventInput, inputKernels, inputNeurons, False)
-    inputNeurons , ffQ = inputLayer.forward()
+    inputLayer.assignLayer(eventInput, inputKernels, inputNeurons, layerTimestamps[0], False)
+    inputNeurons , ffQ, layerTimestamps[0] = inputLayer.forward()
     print("%d spikes in input layer" %(len(ffQ)))
     num_spikes = len(ffQ)
 
     for l in range(HIDDEN_LAYERS):
-        convLayer.assignLayer(ffQ, hiddenKernels[l], hiddenNeurons[l], False)
-        hiddenNeurons[l], ffQ = convLayer.forward()
+        convLayer.assignLayer(ffQ, hiddenKernels[l], hiddenNeurons[l], layerTimestamps[l+1], False)
+        hiddenNeurons[l], ffQ, layerTimestamps[l+1] = convLayer.forward()
         print("%d spikes in layer %d" %(len(ffQ), l+1))
         num_spikes += len(ffQ)
 
