@@ -94,6 +94,7 @@ class ConvLayer:
 
         @return a tuple containing a list of neurons states and an event queue.
         """
+        #TODO t musst be timestamp of last incoming spike for the layer
         t = 0
 
         for _ in range(self.inQueue.qsize()):
@@ -108,7 +109,7 @@ class ConvLayer:
             self.inQueue.task_done()
             self.neurocores[c].loadNeurons(s, self.neurons)
             self.neurocores[c].leakNeurons()
-            updatedNeurons = self.neurocores[c].applyConv()
+            updatedNeurons = self.neurocores[c].applyConv(t)
             self.updateNeurons(s.x_pos, s.y_pos, updatedNeurons)
 
         return (self.neurons, self.outQueue)

@@ -17,19 +17,17 @@ def applyLeak(u, t_last, t_now) -> Tuple:
     @param t_last The timestamp of the last update for this neuron.
     @param t_now The timestamp of the incoming spike.
 
-    @return A tuple containing the updated neuron state.
+    @return The leaked membrane potential.
 
     NOTE: This might be optimised further
-    TODO: Timestamp update might need to be done at threshold check.
     """
     t_leak = t_now - t_last
     # leak neuron if timestamps are different and potential is not zero
     if t_leak*u != 0:
         leak = LEAK_RATE / t_leak
         u = u*leak
-        t_last = t_now
 
-    return (u, t_last)
+    return u
 
 
 class Neurocore:
@@ -51,7 +49,7 @@ class Neurocore:
         self.channel = channel
         self.kernelSize = kernelSize
         self.neuronStatesLeak = np.zeros([numKernels,kernelSize,kernelSize,2], dtype=np.float16) # numpy array containing neighbours of spiking neuron
-        self.neuronStatesConv = self.neuronStatesLeak
+        self.neuronStatesConv = self.neuronStatesLeak.copy()
 
     def assignLayer(self, kernels):
         """
@@ -90,17 +88,15 @@ class Neurocore:
         This function applies a leak to the neuron states and forwards the spike object to the next
         pipline step performing the convolution.
         """
-        leakFunc = np.vectorize(applyLeak, otypes=[np.float16, np.int16])
+        leakFunc = np.vectorize(applyLeak)
         u = self.neuronStatesLeak[:,:,:,0]
         t = self.neuronStatesLeak[:,:,:,1]
-        updated_neurons = leakFunc(u, t, self.spikeLeak.timestamp)
-        self.neuronStatesLeak[:,:,:,0] = updated_neurons[0]
-        self.neuronStatesLeak[:,:,:,1] = updated_neurons[1]
+        self.neuronStatesLeak[:,:,:,0] = leakFunc(u, t, self.spikeLeak.timestamp)
         # forward spike and neurons to convolution step
         self.spikeConv = self.spikeLeak
-        self.neuronStatesConv = self.neuronStatesLeak
+        self.neuronStatesConv = self.neuronStatesLeak.copy()
 
-    def applyConv(self, recurrent = False) -> ArrayLike:
+    def applyConv(self,timestamp, recurrent = False) -> ArrayLike:
         """
         This function performs the convolution operations for neurons neighbouring the current spike
         and one channel (specified by the neurocore) of each kernel. Each kernel will then apply the
@@ -117,6 +113,7 @@ class Neurocore:
         inCurrentLeak = (1-LEAK_RATE)
         kernels = self.recKernels if recurrent else self.kernels
         self.neuronStatesConv[:,:,:,0] += np.flip(np.flip(kernels, axis=1), axis=2)#*inCurrentLeak
+        self.neuronStatesConv[:,:,:,1] = timestamp
 
         return self.neuronStatesConv
 
