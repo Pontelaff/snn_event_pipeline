@@ -1,6 +1,7 @@
 import numpy as np
 from utils import Event, EventQueue
 from layers import ConvLayer
+from timeit import timeit
 
 
 KERNEL_SIZE = 3
@@ -25,33 +26,35 @@ inputKernels = rng.random((KERNEL_NUM, INPUT_CHANNELS, KERNEL_SIZE, KERNEL_SIZE)
 hiddenKernels = rng.random((6, KERNEL_NUM, CONV_CHANNELS, KERNEL_SIZE, KERNEL_SIZE)).astype(np.float16)-0.5
 outputKernels = rng.random((OUTPUT_CHANNELS, CONV_CHANNELS, CONV_CHANNELS, 1, 1)).astype(np.float16)*0.5
 
-# initialise event queues
+# initialise event queue
 eventInput = EventQueue()
 
 # slider
-for i in range(SEG_HEIGHT*(SEG_WIDTH-1)):
+for i in range(SEG_HEIGHT*(SEG_WIDTH-1)//4):
     eventInput.put(Event(i//SEG_HEIGHT, i%SEG_HEIGHT, i//SEG_HEIGHT, 0))
     eventInput.put(Event(i//SEG_HEIGHT+1, i%SEG_HEIGHT, i//SEG_HEIGHT, 1))
 
-# recognizable test values
-#hiddenKernels[0,0,0,0] = [1,2,3]
-#hiddenKernels[0,1,0,0] = [44,55,66]
-#hiddenKernels[0,2,0,1] = [-55,55,-55]
-#hiddenNeurons[0,0,11,23:26] = [[0,1],[2,3],[55,10]]
+def inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels, eventInput):
+    # init layers
+    inputLayer = ConvLayer(2, len(hiddenKernels[0]), len(hiddenKernels[0, 0, 0]))
+    convLayer = ConvLayer(CONV_CHANNELS, len(hiddenKernels[0]), len(hiddenKernels[0, 0, 0]))
 
-# init layers
-inputLayer = ConvLayer(2, len(hiddenKernels[0]), len(hiddenKernels[0, 0, 0]))
-convLayer = ConvLayer(CONV_CHANNELS, len(hiddenKernels[0]), len(hiddenKernels[0, 0, 0]))
+    inputLayer.assignLayer(eventInput, inputKernels, inputNeurons, False)
+    inputNeurons , ffQ = inputLayer.forward()
+    print("%d spikes in input layer" %(ffQ.qsize()))
+    num_spikes = ffQ.qsize()
 
+    for l in range(HIDDEN_LAYERS):
+        convLayer.assignLayer(ffQ, hiddenKernels[l], hiddenNeurons[l], False)
+        hiddenNeurons[l], ffQ = convLayer.forward()
+        print("%d spikes in layer %d" %(ffQ.qsize(), l+1))
+        num_spikes += ffQ.qsize()
 
-inputLayer.assignLayer(eventInput, inputKernels, inputNeurons, False)
-inputNeurons , ffQ = inputLayer.forward(None)
-print("%d spikes in input layer" %(ffQ.qsize()))
+    return num_spikes
 
-for l in range(HIDDEN_LAYERS):
-    convLayer.assignLayer(ffQ, hiddenKernels[l], hiddenNeurons[l], False)
-    hiddenNeurons[l], ffQ = convLayer.forward(None)
-    print("%d spikes in layer %d" %(ffQ.qsize(), l+1))
+runs=1
+time = timeit(lambda: inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels, eventInput), number=runs)
+print(f"Time: {time/runs:.6f}")
 
 #print(" c  x  y  t")
 # while outQ.qsize() > 0:
