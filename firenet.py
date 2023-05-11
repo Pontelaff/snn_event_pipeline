@@ -8,7 +8,7 @@ from dataloader import loadKernels, loadEvents
 DEVICE = "cpu"
 MODEL_PATH = "pretrained/LIFFireNet.pth"
 INPUT_PATH = "datasets/cup-drop-short.h5"
-NUM_INPUT = 100
+NUM_INPUT = 2000000
 
 CONV_CHANNELS = 32
 KERNEL_NUM = CONV_CHANNELS
@@ -26,9 +26,8 @@ outputNeurons = np.zeros([SEG_WIDTH, SEG_HEIGHT, 2], dtype=np.float16)
 # initialise kernel weights
 inputKernels, hiddenKernels, recKernels, outputKernels = loadKernels(MODEL_PATH, DEVICE)
 
-# initialise event queue as slider
+# load input events from file
 eventInput = loadEvents(INPUT_PATH, NUM_INPUT)
-eventInput = [Spike(i//SEG_HEIGHT+j, i%SEG_HEIGHT, j, i//SEG_HEIGHT) for i in range(SEG_HEIGHT*(SEG_WIDTH-1)) for j in range(INPUT_CHANNELS)]
 
 layerTimestamps = np.zeros(8)
 def inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels, eventInput):

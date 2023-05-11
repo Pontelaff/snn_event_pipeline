@@ -25,15 +25,29 @@ def loadKernels(modelPath, device) -> Tuple:
 
     return (inputKernels, hiddenKernels, recKernels, outputKernels)
 
-def loadEvents(filePath, numEvents) -> SpikeQueue:
+def loadEvents(filePath, numEvents = -1) -> SpikeQueue:
     if os.path.isfile(filePath):
         file = h5py.File(filePath, 'r')
-        xs = file["events/xs"][:numEvents]
-        ys = file["events/ys"][:numEvents]
-        ts = file["events/ts"][:numEvents]
-        ps = file["events/ps"][:numEvents]
-        spikeQueue = [Spike(xs[i], ys[i], int(ps[i]), ts[i]) for i in range(len(xs))]
-        print("Input events read from " + filePath + "\n")
+        if numEvents == -1:
+            numEvents = file.attrs["num_events"]
+        events = np.zeros((numEvents, 4), dtype=np.int32)
+        events[:,0] = file["events/xs"][:numEvents]
+        events[:,1] = file["events/ys"][:numEvents]
+        events[:,2] = file["events/ps"][:numEvents]
+        events[:,3] = file["events/ts"][:numEvents]
+        file.close()
+
+        # filter a 32x32 window of the dropping cup
+        mask = (events[:, 0] >= 300) & (events[:, 0] <= 331) & (events[:, 1] <= 31) &\
+            (events[:,3] >= 80000) & (events[:,3] <= 180000)
+        ev = events[mask]
+
+        # subtract offset to start at t = 0
+        t_offset = ev[0,3]
+        ev[:,3] -= t_offset
+
+        spikeQueue = [Spike(ev[i][0]-300, ev[i][1], int(ev[i][2]), ev[i][3]) for i in range(len(ev))]
+        print(f"{len(spikeQueue)} Input events read from {filePath}\n")
     else:
         print("File not found at " + filePath + "\n")
         return None
