@@ -2,9 +2,12 @@ import numpy as np
 from utils import Spike
 from layers import ConvLayer
 from timeit import timeit
+from dataloader import loadKernels
 
 
-KERNEL_SIZE = 3
+DEVICE = "cpu"
+MODEL_PATH = "pretrained/LIFFireNet.pth"
+
 CONV_CHANNELS = 32
 KERNEL_NUM = CONV_CHANNELS
 HIDDEN_LAYERS = 6
@@ -13,20 +16,16 @@ OUTPUT_CHANNELS = 2
 SEG_WIDTH = 32
 SEG_HEIGHT = 32
 
-#Random number generator
-rng = np.random.default_rng(12)
 # initialise neuron states
 inputNeurons = np.zeros([CONV_CHANNELS, SEG_WIDTH, SEG_HEIGHT, 2], dtype=np.float16)
 hiddenNeurons = np.zeros([6, CONV_CHANNELS, SEG_WIDTH, SEG_HEIGHT, 2], dtype=np.float16)
 outputNeurons = np.zeros([SEG_WIDTH, SEG_HEIGHT, 2], dtype=np.float16)
 
 # initialise kernel weights
-inputKernels = rng.random((KERNEL_NUM, INPUT_CHANNELS, KERNEL_SIZE, KERNEL_SIZE)).astype(np.float16)-0.48
-hiddenKernels = rng.random((6, KERNEL_NUM, CONV_CHANNELS, KERNEL_SIZE, KERNEL_SIZE)).astype(np.float16)-0.5
-outputKernels = rng.random((OUTPUT_CHANNELS, CONV_CHANNELS, CONV_CHANNELS, 1, 1)).astype(np.float16)*0.5
+inputKernels, hiddenKernels, recKernels, outputKernels = loadKernels(MODEL_PATH, DEVICE)
 
 # initialise event queue as slider
-eventInput = [Spike(i//SEG_HEIGHT+j, i%SEG_HEIGHT, j, i//SEG_HEIGHT) for i in range(SEG_HEIGHT*(SEG_WIDTH-1)//4) for j in range(INPUT_CHANNELS)]
+eventInput = [Spike(i//SEG_HEIGHT+j, i%SEG_HEIGHT, j, i//SEG_HEIGHT) for i in range(SEG_HEIGHT*(SEG_WIDTH-1)) for j in range(INPUT_CHANNELS)]
 
 layerTimestamps = np.zeros(8)
 def inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels, eventInput):
