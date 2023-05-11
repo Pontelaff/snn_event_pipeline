@@ -1,11 +1,9 @@
 import numpy as np
-from utils import Spike
 from layers import ConvLayer
 from timeit import timeit
 from dataloader import loadKernels, loadEvents
 
 
-DEVICE = "cpu"
 MODEL_PATH = "pretrained/LIFFireNet.pth"
 INPUT_PATH = "datasets/cup-drop-short.h5"
 NUM_INPUT = 2000000
@@ -24,7 +22,7 @@ hiddenNeurons = np.zeros([6, CONV_CHANNELS, SEG_WIDTH, SEG_HEIGHT, 2], dtype=np.
 outputNeurons = np.zeros([SEG_WIDTH, SEG_HEIGHT, 2], dtype=np.float16)
 
 # initialise kernel weights
-inputKernels, hiddenKernels, recKernels, outputKernels = loadKernels(MODEL_PATH, DEVICE)
+inputKernels, hiddenKernels, recKernels, outputKernels = loadKernels(MODEL_PATH)
 
 # load input events from file
 eventInput = loadEvents(INPUT_PATH, NUM_INPUT)
