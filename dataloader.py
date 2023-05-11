@@ -1,16 +1,19 @@
 import os
 import torch
-from models.model import FireNet, LIFFireNet
+import h5py
 import numpy as np
+from typing import Tuple
+from models.model import FireNet, LIFFireNet
+from utils import SpikeQueue, Spike
 
 
-
-def loadKernels(model_dir, device):
-    if os.path.isfile(model_dir):
-        model = torch.load(model_dir, map_location=device)
-        print("Model restored from " + model_dir + "\n")
+def loadKernels(modelPath, device) -> Tuple:
+    if os.path.isfile(modelPath):
+        model = torch.load(modelPath, map_location=device)
+        print("Model restored from " + modelPath + "\n")
     else:
-        print("No model found at" + model_dir + "\n")
+        print("No model found at" + modelPath + "\n")
+        return None
 
     inputKernels = model.head.ff.weight.detach().numpy()
 
@@ -21,3 +24,19 @@ def loadKernels(model_dir, device):
     outputKernels = model.pred.conv2d.weight.detach().numpy()
 
     return (inputKernels, hiddenKernels, recKernels, outputKernels)
+
+def loadEvents(filePath, numEvents) -> SpikeQueue:
+    if os.path.isfile(filePath):
+        file = h5py.File(filePath, 'r')
+        xs = file["events/xs"][:numEvents]
+        ys = file["events/ys"][:numEvents]
+        ts = file["events/ts"][:numEvents]
+        ps = file["events/ps"][:numEvents]
+        spikeQueue = [Spike(xs[i], ys[i], int(ps[i]), ts[i]) for i in range(len(xs))]
+        print("Input events read from " + filePath + "\n")
+    else:
+        print("File not found at " + filePath + "\n")
+        return None
+
+
+    return spikeQueue
