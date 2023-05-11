@@ -98,15 +98,15 @@ class ConvLayer:
 
         for _ in range(len(self.inQueue)):
             s = self.inQueue.pop(0)
-            c = s.channel
-            if self.t < s.timestamp:
+            c = s.c
+            if self.t < s.t:
                 # next timestamps, generate Spikes for last timestamp
                 self.generateSpikes()
-                self.t = s.timestamp
+                self.t = s.t
 
             self.neurocores[c].loadNeurons(s, self.neurons)
             self.neurocores[c].leakNeurons()
             updatedNeurons = self.neurocores[c].applyConv(self.t)
-            self.updateNeurons(s.x_pos, s.y_pos, updatedNeurons)
+            self.updateNeurons(s.x, s.y, updatedNeurons)
 
         return self.neurons, self.outQueue, self.t

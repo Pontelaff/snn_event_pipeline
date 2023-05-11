@@ -81,7 +81,7 @@ class Neurocore:
         # for each channel of current layer
         # load neuron states neighbouring spike coordinates
         # start pos-1 stop pos+2 and increment by 1 to account for padding
-        self.neuronStatesLeak = neurons[:, s.x_pos:s.x_pos+3, s.y_pos:s.y_pos+3]
+        self.neuronStatesLeak = neurons[:, s.x:s.x+3, s.y:s.y+3]
         self.spikeLeak = s
 
     def leakNeurons(self):
@@ -92,7 +92,7 @@ class Neurocore:
         leakFunc = np.vectorize(applyLeak)
         u = self.neuronStatesLeak[:,:,:,0]
         t = self.neuronStatesLeak[:,:,:,1]
-        self.neuronStatesLeak[:,:,:,0] = leakFunc(u, t, self.spikeLeak.timestamp)
+        self.neuronStatesLeak[:,:,:,0] = leakFunc(u, t, self.spikeLeak.t)
         # forward spike and neurons to convolution step
         self.spikeConv = self.spikeLeak
         self.neuronStatesConv = self.neuronStatesLeak.copy()
