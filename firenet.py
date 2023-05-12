@@ -2,6 +2,7 @@ import numpy as np
 from layers import ConvLayer
 from timeit import timeit
 from dataloader import loadKernels, loadEvents
+from utils import SpikeQueue
 
 
 MODEL_PATH = "pretrained/LIFFireNet.pth"
@@ -10,6 +11,7 @@ NUM_INPUT = 2000000
 
 SEG_WIDTH = 32
 SEG_HEIGHT = 32
+REC_LAYERS = (0,3)
 
 # initialise kernel weights
 inputKernels, hiddenKernels, recKernels, outputKernels = loadKernels(MODEL_PATH)
@@ -30,15 +32,28 @@ def inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels, eventInp
     convLayer = ConvLayer(len(hiddenKernels[0, 0]), len(hiddenKernels[0]), len(hiddenKernels[0, 0, 0]))
 
     # run input layer
-    inputLayer.assignLayer(eventInput, inputKernels, inputNeurons, layerTimestamps[0], False)
-    inputNeurons , ffQ, layerTimestamps[0] = inputLayer.forward()
+    inputLayer.assignLayer(eventInput, inputKernels, inputNeurons, layerTimestamps[0])
+    inputNeurons , ffQ, _, layerTimestamps[0] = inputLayer.forward()
     print("%d spikes in input layer" %(len(ffQ)))
     num_spikes = len(ffQ)
 
+    recQueues = [SpikeQueue() for _ in range(len(REC_LAYERS))]
+
     # run hidden layers
     for l in range(numHiddenLayers):
-        convLayer.assignLayer(ffQ, hiddenKernels[l], hiddenNeurons[l], layerTimestamps[l+1], False)
-        hiddenNeurons[l], ffQ, layerTimestamps[l+1] = convLayer.forward()
+        try:
+            recInd = REC_LAYERS.index(l)
+            rec = True
+        except ValueError as ve:
+            rec = False
+
+        if rec:
+            convLayer.assignLayer(ffQ, hiddenKernels[l], hiddenNeurons[l], layerTimestamps[l+1], recQueues[recInd], recKernels[recInd])
+            hiddenNeurons[l], ffQ, recQueues[recInd], layerTimestamps[l+1] = convLayer.forward()
+        else:
+            convLayer.assignLayer(ffQ, hiddenKernels[l], hiddenNeurons[l], layerTimestamps[l+1])
+            hiddenNeurons[l], ffQ, _, layerTimestamps[l+1] = convLayer.forward()
+
         print("%d spikes in layer %d" %(len(ffQ), l+1))
         num_spikes += len(ffQ)
 

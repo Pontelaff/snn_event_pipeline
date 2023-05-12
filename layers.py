@@ -8,9 +8,10 @@ from neurocore import Neurocore
 class ConvLayer:
     recurrent = False
     neurons = None
-    outQueue = None
-    inQueue = None
-    t = 0
+    outQueue = SpikeQueue()
+    recQueue = SpikeQueue()
+    inQueue = SpikeQueue()
+    t = None
 
     def __init__(self, inChannels, numKernels, kernelSize) -> None:
         """
@@ -25,24 +26,27 @@ class ConvLayer:
         # generate neurocores
         self.neurocores = [Neurocore(c, numKernels, kernelSize) for c in range(inChannels)]
 
-    def assignLayer(self, inQueue : SpikeQueue, layerKernels, neurons, t_last, recurrence):
+    def assignLayer(self, inQueue : SpikeQueue, layerKernels, neurons, t_last, recQueue = SpikeQueue(), recKernels = None):
         """
         This function assigns a new layer to a set of neurocores with specified kernels, and neurons.
 
         @param inQueue A List containing Spike tuples representing the input queue for the layer.
-        @param layerKernels This parameter is a list of kernel objects that represent the computation to
-        be performed by each neurocore in the layer. Each neurocore will be assigned one channel of each
-        kernel from this list.
+        @param layerKernels A Numpy array containing the convolutional kernels that represent the
+        computation to be performed by each neurocore in the layer. Each neurocore will be assigned
+        one channel of each kernel from this list.
         @param neurons A set of neuron states of the new layer
-        @param recurrence A boolean value indicating whether the layer has recurrent connections or not.
+        @param recQueue A List containing Spike tuples representing recurrent spikes of an earlier iteration
+        @param recKernels A numpy array containing the ercurrent Kernels, if the layer should be recurrent or
+        None otherwise.
         """
         self.inQueue = inQueue
-        self.outQueue = []
+        self.recQueue = recQueue
+        self.outQueue = SpikeQueue()
         self.neurons = neurons
         self.t = t_last
-        self.recurrent = recurrence
+        self.recurrent = recKernels is not None
         for nc in self.neurocores:
-            nc.assignLayer(layerKernels)
+            nc.assignLayer(layerKernels, recKernels)
 
     def updateNeurons(self, x, y, updatedNeurons):
         """
@@ -78,26 +82,26 @@ class ConvLayer:
         and the membrane potential is at reset value, indicating a spike just occured. For that to work,
         leaks (and therefore timestamp updates) can not be applied to neurons already at reset potential,
         which also means that timestamps then need be updated at threshold check.
+        TODO: Big problem! Input layer has 32 out channels, but only 2 neurocores! Threshold check needs changes!
         """
         for nc in range(len(self.neurocores)):
-            (self.neurons[nc], newEvents) = self.neurocores[nc].checkThreshold(self.neurons[nc])
+            (self.neurons[nc], newEvents, recEvents) = self.neurocores[nc].checkThreshold(self.neurons[nc], self.recurrent)
             self.outQueue.extend(newEvents)
+            self.recQueue.extend(recEvents)
             # TODO: Recurrence
 
-    def forward(self, recQueue : SpikeQueue = None) -> Tuple[List, SpikeQueue]:
+    def forward(self) -> Tuple[List, SpikeQueue]:
         """
         This function processes events from an input queue, updates neurons, and generates new events
         for an output queue.
 
-        @param recQueue The recQueue parameter is an SpikeQueue list object that represents the queue of
-        events that need to be processed recursively.
-
         @return a tuple containing a list of neurons states, an event queue and the timestamp of the last update
         """
-        #TODO t musst be timestamp of last incoming spike for the layer
 
-        for _ in range(len(self.inQueue)):
-            s = self.inQueue.pop(0)
+        while len(self.inQueue) > 0:
+            recSpike = (self.inQueue[0].t < self.recQueue[0].t) if (len(self.recQueue) > 0) else False
+            s = self.recQueue.pop(0) if recSpike else self.inQueue.pop(0)
+
             c = s.c
             if self.t < s.t:
                 # next timestamps, generate Spikes for last timestamp
@@ -106,7 +110,9 @@ class ConvLayer:
 
             self.neurocores[c].loadNeurons(s, self.neurons)
             self.neurocores[c].leakNeurons()
-            updatedNeurons = self.neurocores[c].applyConv(self.t)
+            updatedNeurons = self.neurocores[c].applyConv(self.t, recSpike)
             self.updateNeurons(s.x, s.y, updatedNeurons)
 
-        return self.neurons, self.outQueue, self.t
+            self.generateSpikes()
+
+        return self.neurons, self.outQueue, self.recQueue, self.t
