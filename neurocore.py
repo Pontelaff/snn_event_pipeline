@@ -3,7 +3,7 @@ from utils import Spike, SpikeQueue
 from typing import Tuple
 from numpy.typing import ArrayLike
 
-LEAK_RATE = 0.90
+LEAK_RATE = 0.17
 U_RESET = 0
 U_THRESH = 1
 REC_DELAY = 10
@@ -117,7 +117,7 @@ class Neurocore:
         """
         #inCurrentLeak = (1-LEAK_RATE)
         kernels = self.recKernels if recurrent else self.kernels
-        self.neuronStatesConv['u'] += np.flip(np.flip(kernels, axis=1), axis=2)#*inCurrentLeak
+        self.neuronStatesConv['u']+= kernels#*inCurrentLeak
         self.neuronStatesConv['t'] = timestamp
 
         return self.neuronStatesConv

@@ -114,6 +114,6 @@ class ConvLayer:
             updatedNeurons = self.neurocores[c].applyConv(self.t, recSpike)
             self.updateNeurons(s.x, s.y, updatedNeurons)
 
-            self.generateSpikes()
+        self.generateSpikes()
 
         return self.neurons, self.outQueue, self.recQueue, self.t
