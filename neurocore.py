@@ -7,6 +7,7 @@ LEAK_RATE = 0.17
 U_RESET = 0
 U_THRESH = 1
 REC_DELAY = 10
+REFRACTORY_PERIOD = 20
 
 
 def applyLeak(u, t_last, t_now) -> np.float16:
@@ -32,7 +33,6 @@ def applyLeak(u, t_last, t_now) -> np.float16:
 
 
 class Neurocore:
-
     # member attributes
     kernels = None      # 32*3*3 numpy array containing one channel each of 32 Kernels
     recKernels = None   # recurrent Kernels
@@ -101,7 +101,7 @@ class Neurocore:
         self.spikeConv = self.spikeLeak
         self.neuronStatesConv = self.neuronStatesLeak.copy()
 
-    def applyConv(self,timestamp, recurrent = False) -> ArrayLike:
+    def applyConv(self, recurrent = False) -> ArrayLike:
         """
         This function performs the convolution operations for neurons neighbouring the current spike
         and one channel (specified by the neurocore) of each kernel. Each kernel will then apply the
@@ -117,8 +117,10 @@ class Neurocore:
         """
         #inCurrentLeak = (1-LEAK_RATE)
         kernels = self.recKernels if recurrent else self.kernels
-        self.neuronStatesConv['u']+= kernels#*inCurrentLeak
-        self.neuronStatesConv['t'] = timestamp
+        updateIndices = np.where((self.neuronStatesConv['u'] != U_RESET) | (self.neuronStatesConv['t'] < self.spikeConv.t - REFRACTORY_PERIOD))
+        self.neuronStatesConv['u'][updateIndices] += kernels[updateIndices]#*inCurrentLeak
+        self.neuronStatesConv['t'][updateIndices] = self.spikeConv.t
+
 
         return self.neuronStatesConv
 
@@ -142,9 +144,9 @@ class Neurocore:
         # Reset potential of all exceeded neurons
         neurons['u'][exceed_indices] = U_RESET
         # Extract the timestamps of exceeded neurons and create corresponding events
-        events = [Spike(x, y, self.channel, neurons[x, y]['t']) for x, y in zip(*exceed_indices)]
+        events = [Spike(x, y, c, neurons[c, x, y]['t']) for c, x, y in zip(*exceed_indices)]
         if recurrent and len(events) > 0:
-            recEvents = [Spike(x, y, self.channel, neurons[x, y]['t'] + REC_DELAY) for x, y in zip(*exceed_indices)]
+            recEvents = [Spike(x, y, c, neurons[c, x, y]['t'] + REC_DELAY) for c, x, y in zip(*exceed_indices)]
         else:
             recEvents = SpikeQueue()
 

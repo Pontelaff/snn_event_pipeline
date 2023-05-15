@@ -27,15 +27,14 @@ outputNeurons = np.zeros([len(outputKernels), SEG_WIDTH, SEG_HEIGHT], dtype=dtyp
 # load input events from file
 eventInput = loadEvents(INPUT_PATH, NUM_INPUT)
 
-layerTimestamps = np.zeros(8)
 def inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels, eventInput):
     # init layers
     inputLayer = ConvLayer(len(inputKernels[0]), len(hiddenKernels[0]), len(hiddenKernels[0, 0, 0]), dtype)
     convLayer = ConvLayer(len(hiddenKernels[0, 0]), len(hiddenKernels[0]), len(hiddenKernels[0, 0, 0]), dtype)
 
     # run input layer
-    inputLayer.assignLayer(eventInput, inputKernels, inputNeurons, layerTimestamps[0])
-    inputNeurons , ffQ, _, layerTimestamps[0] = inputLayer.forward()
+    inputLayer.assignLayer(eventInput, inputKernels, inputNeurons)
+    inputNeurons, ffQ, _ = inputLayer.forward()
     print("%d spikes in input layer" %(len(ffQ)))
     num_spikes = len(ffQ)
 
@@ -50,11 +49,11 @@ def inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels, eventInp
             rec = False
 
         if rec:
-            convLayer.assignLayer(ffQ, hiddenKernels[l], hiddenNeurons[l], layerTimestamps[l+1], recQueues[recInd], recKernels[recInd])
-            hiddenNeurons[l], ffQ, recQueues[recInd], layerTimestamps[l+1] = convLayer.forward()
+            convLayer.assignLayer(ffQ, hiddenKernels[l], hiddenNeurons[l], recQueues[recInd], recKernels[recInd])
+            hiddenNeurons[l], ffQ, recQueues[recInd]= convLayer.forward()
         else:
-            convLayer.assignLayer(ffQ, hiddenKernels[l], hiddenNeurons[l], layerTimestamps[l+1])
-            hiddenNeurons[l], ffQ, _, layerTimestamps[l+1] = convLayer.forward()
+            convLayer.assignLayer(ffQ, hiddenKernels[l], hiddenNeurons[l])
+            hiddenNeurons[l], ffQ, _ = convLayer.forward()
 
         print("%d spikes in layer %d" %(len(ffQ), l+1))
         num_spikes += len(ffQ)

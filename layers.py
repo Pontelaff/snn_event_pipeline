@@ -1,4 +1,5 @@
 from typing import List, Tuple
+from numpy.typing import ArrayLike
 from utils import SpikeQueue
 from neurocore import Neurocore
 
@@ -11,7 +12,6 @@ class ConvLayer:
     outQueue = SpikeQueue()
     recQueue = SpikeQueue()
     inQueue = SpikeQueue()
-    t = None
 
     def __init__(self, inChannels, numKernels, kernelSize, dtype) -> None:
         """
@@ -26,7 +26,7 @@ class ConvLayer:
         # generate neurocores
         self.neurocores = [Neurocore(c, numKernels, kernelSize, dtype) for c in range(inChannels)]
 
-    def assignLayer(self, inQueue : SpikeQueue, layerKernels, neurons, t_last, recQueue = SpikeQueue(), recKernels = None):
+    def assignLayer(self, inQueue : SpikeQueue, layerKernels, neurons, recQueue = SpikeQueue(), recKernels = None):
         """
         This function assigns a new layer to a set of neurocores with specified kernels, and neurons.
 
@@ -43,7 +43,6 @@ class ConvLayer:
         self.recQueue = recQueue
         self.outQueue = SpikeQueue()
         self.neurons = neurons
-        self.t = t_last
         self.recurrent = recKernels is not None
         for nc in self.neurocores:
             nc.assignLayer(layerKernels, recKernels)
@@ -67,31 +66,24 @@ class ConvLayer:
 
         self.neurons[:, x-l:x+r+1, y-u:y+d+1] = updatedNeurons[:, 1-l:2+r, 1-u:2+d]
 
-    def generateSpikes(self):
+    def generateSpikes(self, neurons, channel) -> ArrayLike:
         """
-        This function applies the threshold check for all neurons of each channel and adds resulting
-        events to the output queue.
+        This function generates spikes for a given set of neurons, and returns the updated neuron states.
+        The threshold check is performed by the neurocore, which also performed the convolution before.
 
-        NOTE: There are two other alternatives, which check thresholds and generate spikes with each
-        incoming spike. However, measures must be taken to prohibit spiking during the same and
-        potentially following timestamps (depending on refractory time).
-        This can be done by:
-        1. Marking spiked neurons with a flag or counter. This might improve performance but increases
-        the amount of data stored and transmitted.
-        2. Skipping the convolution step, if the timestamp is up to date (or within refractory period)
-        and the membrane potential is at reset value, indicating a spike just occured. For that to work,
-        leaks (and therefore timestamp updates) can not be applied to neurons already at reset potential,
-        which also means that timestamps then need be updated at threshold check. This might decrease performance.
-        TODO: Big problem! Input layer has 32 out channels, but only 2 neurocores! Threshold check needs changes!
+        @param neurons A numpy array of all neurons, which were updated by the convolution
+        @param channel The channel where the spike occured that let to the convolution opeattion.
+        Determines which neurocore will perform the threshold check.
+
+        @return The updated neurons as a numpy array.
         """
-        for n in range(len(self.neurons)):
-            # Each neurocore should calculate threshold for one output channel. This doesn't work because the input Layer
-            # has only 2 neurocores, but 32 output channels. As a quick fix, the first neurocore checks all output layers
-            (self.neurons[n], newEvents, recEvents) = self.neurocores[0].checkLayerThreshold(self.neurons[n], self.recurrent)
-            self.outQueue.extend(newEvents)
-            self.recQueue.extend(recEvents)
+        (updatedNeurons, newEvents, recEvents) = self.neurocores[channel].checkThreshold(neurons, self.recurrent)
+        self.outQueue.extend(newEvents)
+        self.recQueue.extend(recEvents)
 
-    def forward(self) -> Tuple[List, SpikeQueue]:
+        return updatedNeurons
+
+    def forward(self) -> Tuple[List, SpikeQueue, SpikeQueue]:
         """
         This function processes events from an input queue, updates neurons, and generates new events
         for an output queue.
@@ -102,18 +94,12 @@ class ConvLayer:
         while len(self.inQueue) > 0:
             recSpike = (self.inQueue[0].t < self.recQueue[0].t) if (len(self.recQueue) > 0) else False
             s = self.recQueue.pop(0) if recSpike else self.inQueue.pop(0)
-
             c = s.c
-            if self.t < s.t:
-                # next timestamps, generate Spikes for last timestamp
-                self.generateSpikes()
-                self.t = s.t
 
             self.neurocores[c].loadNeurons(s, self.neurons)
             self.neurocores[c].leakNeurons()
-            updatedNeurons = self.neurocores[c].applyConv(self.t, recSpike)
+            updatedNeurons = self.neurocores[c].applyConv(recSpike)
+            updatedNeurons = self.generateSpikes(updatedNeurons, c)
             self.updateNeurons(s.x, s.y, updatedNeurons)
 
-        self.generateSpikes()
-
-        return self.neurons, self.outQueue, self.recQueue, self.t
+        return self.neurons, self.outQueue, self.recQueue
