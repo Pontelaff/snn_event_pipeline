@@ -81,14 +81,15 @@ class ConvLayer:
         2. Skipping the convolution step, if the timestamp is up to date (or within refractory period)
         and the membrane potential is at reset value, indicating a spike just occured. For that to work,
         leaks (and therefore timestamp updates) can not be applied to neurons already at reset potential,
-        which also means that timestamps then need be updated at threshold check.
+        which also means that timestamps then need be updated at threshold check. This might decrease performance.
         TODO: Big problem! Input layer has 32 out channels, but only 2 neurocores! Threshold check needs changes!
         """
-        for nc in range(len(self.neurocores)):
-            (self.neurons[nc], newEvents, recEvents) = self.neurocores[nc].checkThreshold(self.neurons[nc], self.recurrent)
+        for n in range(len(self.neurons)):
+            # Each neurocore should calculate threshold for one output channel. This doesn't work because the input Layer
+            # has only 2 neurocores, but 32 output channels. As a quick fix, the first neurocore checks all output layers
+            (self.neurons[n], newEvents, recEvents) = self.neurocores[0].checkLayerThreshold(self.neurons[n], self.recurrent)
             self.outQueue.extend(newEvents)
             self.recQueue.extend(recEvents)
-            # TODO: Recurrence
 
     def forward(self) -> Tuple[List, SpikeQueue]:
         """
