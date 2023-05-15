@@ -13,7 +13,7 @@ class ConvLayer:
     inQueue = SpikeQueue()
     t = None
 
-    def __init__(self, inChannels, numKernels, kernelSize) -> None:
+    def __init__(self, inChannels, numKernels, kernelSize, dtype) -> None:
         """
         This function initializes a list of neurocores for each input channel with a specified number of
         kernels and kernel size.
@@ -24,7 +24,7 @@ class ConvLayer:
         be used in the convolutional layer.
         """
         # generate neurocores
-        self.neurocores = [Neurocore(c, numKernels, kernelSize) for c in range(inChannels)]
+        self.neurocores = [Neurocore(c, numKernels, kernelSize, dtype) for c in range(inChannels)]
 
     def assignLayer(self, inQueue : SpikeQueue, layerKernels, neurons, t_last, recQueue = SpikeQueue(), recKernels = None):
         """

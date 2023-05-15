@@ -16,11 +16,13 @@ REC_LAYERS = (0,3)
 # initialise kernel weights
 inputKernels, hiddenKernels, recKernels, outputKernels = loadKernels(MODEL_PATH)
 
+# define the structured data type
+dtype = np.dtype([('u', np.float16), ('t', np.int32)])
 # initialise neuron states
 numHiddenLayers = len(hiddenKernels)
-inputNeurons = np.zeros([len(inputKernels), SEG_WIDTH, SEG_HEIGHT, 2], dtype=np.float16)
-hiddenNeurons = np.zeros([numHiddenLayers, len(hiddenKernels[0]), SEG_WIDTH, SEG_HEIGHT, 2], dtype=np.float16)
-outputNeurons = np.zeros([len(outputKernels), SEG_WIDTH, SEG_HEIGHT, 2], dtype=np.float16)
+inputNeurons = np.zeros([len(inputKernels), SEG_WIDTH, SEG_HEIGHT], dtype=dtype)
+hiddenNeurons = np.zeros([numHiddenLayers, len(hiddenKernels[0]), SEG_WIDTH, SEG_HEIGHT], dtype=dtype)
+outputNeurons = np.zeros([len(outputKernels), SEG_WIDTH, SEG_HEIGHT], dtype=dtype)
 
 # load input events from file
 eventInput = loadEvents(INPUT_PATH, NUM_INPUT)
@@ -28,8 +30,8 @@ eventInput = loadEvents(INPUT_PATH, NUM_INPUT)
 layerTimestamps = np.zeros(8)
 def inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels, eventInput):
     # init layers
-    inputLayer = ConvLayer(len(inputKernels[0]), len(hiddenKernels[0]), len(hiddenKernels[0, 0, 0]))
-    convLayer = ConvLayer(len(hiddenKernels[0, 0]), len(hiddenKernels[0]), len(hiddenKernels[0, 0, 0]))
+    inputLayer = ConvLayer(len(inputKernels[0]), len(hiddenKernels[0]), len(hiddenKernels[0, 0, 0]), dtype)
+    convLayer = ConvLayer(len(hiddenKernels[0, 0]), len(hiddenKernels[0]), len(hiddenKernels[0, 0, 0]), dtype)
 
     # run input layer
     inputLayer.assignLayer(eventInput, inputKernels, inputNeurons, layerTimestamps[0])

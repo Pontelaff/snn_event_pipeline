@@ -9,7 +9,7 @@ U_THRESH = 1
 REC_DELAY = 10
 
 
-def applyLeak(u, t_last, t_now) -> Tuple:
+def applyLeak(u, t_last, t_now) -> np.float16:
     """
     This function applies a leak to a neuron based on the time elapsed since the last
     application of the leak.
@@ -39,7 +39,7 @@ class Neurocore:
     spikeLeak = None    # spike for neuron Leak step
     spikeConv = None    # spike for convolution step
 
-    def __init__(self, channel, numKernels, kernelSize) -> None:
+    def __init__(self, channel, numKernels, kernelSize, dtype) -> None:
         """
         This is the initialization function for a neurocore managing input from one channel in a convolutional
         neural network layer.
@@ -47,10 +47,11 @@ class Neurocore:
         @param channel The number of the channel, which this neurocore is receiving spikes from.
         @param numKernels The number of kernels in the layer. This also determines the number of output channels.
         @param kernelSize The height and with of the kernels
+        @param dtype datatype of the neuron states
         """
         self.channel = channel
         self.kernelSize = kernelSize
-        self.neuronStatesLeak = np.zeros([numKernels,kernelSize,kernelSize,2], dtype=np.float16) # numpy array containing neighbours of spiking neuron
+        self.neuronStatesLeak = np.zeros([numKernels,kernelSize,kernelSize], dtype=dtype) # numpy array containing neighbours of spiking neuron
         self.neuronStatesConv = self.neuronStatesLeak.copy()
 
     def assignLayer(self, kernels, recKernels = None):
@@ -80,7 +81,7 @@ class Neurocore:
         """
 
         # pad each channel with zeros (don't pad neuron states)
-        neurons = np.pad(neurons, ((0,0),(1,1),(1,1),(0,0)), 'constant')
+        neurons = np.pad(neurons, ((0,0),(1,1),(1,1)), 'constant')
         # for each channel of current layer
         # load neuron states neighbouring spike coordinates
         # start pos-1 stop pos+2 and increment by 1 to account for padding
@@ -93,9 +94,9 @@ class Neurocore:
         pipline step performing the convolution.
         """
         leakFunc = np.vectorize(applyLeak)
-        u = self.neuronStatesLeak[:,:,:,0]
-        t = self.neuronStatesLeak[:,:,:,1]
-        self.neuronStatesLeak[:,:,:,0] = leakFunc(u, t, self.spikeLeak.t)
+        u = self.neuronStatesLeak['u']
+        t = self.neuronStatesLeak['t']
+        self.neuronStatesLeak['u'] = leakFunc(u, t, self.spikeLeak.t)
         # forward spike and neurons to convolution step
         self.spikeConv = self.spikeLeak
         self.neuronStatesConv = self.neuronStatesLeak.copy()
@@ -116,8 +117,8 @@ class Neurocore:
         """
         #inCurrentLeak = (1-LEAK_RATE)
         kernels = self.recKernels if recurrent else self.kernels
-        self.neuronStatesConv[:,:,:,0] += np.flip(np.flip(kernels, axis=1), axis=2)#*inCurrentLeak
-        self.neuronStatesConv[:,:,:,1] = timestamp
+        self.neuronStatesConv['u'] += np.flip(np.flip(kernels, axis=1), axis=2)#*inCurrentLeak
+        self.neuronStatesConv['t'] = timestamp
 
         return self.neuronStatesConv
 
@@ -137,13 +138,13 @@ class Neurocore:
         TODO: reset negative states?
         """
         # Get indices of all neurons that exceed U_THRESH
-        exceed_indices = np.where(neurons[:,:,0] > U_THRESH)
+        exceed_indices = np.where(neurons['u'] > U_THRESH)
         # Reset potential of all exceeded neurons
-        neurons[:,:,0][exceed_indices] = U_RESET
+        neurons['u'][exceed_indices] = U_RESET
         # Extract the timestamps of exceeded neurons and create corresponding events
-        events = [Spike(x, y, self.channel, neurons[x, y, 1].item()) for x, y in zip(*exceed_indices)]
-        if recurrent:
-            recEvents = [Spike(x, y, self.channel, neurons[x, y, 1].item() + REC_DELAY) for x, y in zip(*exceed_indices)]
+        events = [Spike(x, y, self.channel, neurons[x, y]['t']) for x, y in zip(*exceed_indices)]
+        if recurrent and len(events) > 0:
+            recEvents = [Spike(x, y, self.channel, neurons[x, y]['t'] + REC_DELAY) for x, y in zip(*exceed_indices)]
         else:
             recEvents = SpikeQueue()
 
