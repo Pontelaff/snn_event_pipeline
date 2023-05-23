@@ -4,6 +4,7 @@ from timeit import timeit
 from dataloader import loadKernels, loadEvents
 from utils import SpikeQueue
 from neurocore import LOG_NEURON, LOG_BINSIZE
+from visualization import plotNeuronActivity
 
 
 MODEL_PATH = "pretrained/LIFFireNet.pth"
@@ -81,6 +82,8 @@ def inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels, eventInp
 runs=1
 time = timeit(lambda: inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels, eventInput), number=runs)
 print(f"Time: {time/runs:.6f}")
+
+plotNeuronActivity(neuronLogIn, neuronLogOut)
 
 #print(" c  x  y  t")
 # while outQ.qsize() > 0:
