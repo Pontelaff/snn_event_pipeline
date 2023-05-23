@@ -3,6 +3,7 @@ from layers import ConvLayer
 from timeit import timeit
 from dataloader import loadKernels, loadEvents
 from utils import SpikeQueue
+from neurocore import LOG_NEURON, LOG_BINSIZE
 
 
 MODEL_PATH = "pretrained/LIFFireNet.pth"
@@ -25,7 +26,20 @@ hiddenNeurons = np.zeros([numHiddenLayers, len(hiddenKernels[0]), SEG_WIDTH, SEG
 outputNeurons = np.zeros([len(outputKernels), SEG_WIDTH, SEG_HEIGHT], dtype=dtype)
 
 # load input events from file
-eventInput = loadEvents(INPUT_PATH, NUM_INPUT)
+eventInput = loadEvents(INPUT_PATH, SEG_WIDTH, SEG_HEIGHT, NUM_INPUT)
+
+if LOG_NEURON is not None:
+    num_bins = eventInput[-1].t//LOG_BINSIZE
+    logLayer = LOG_NEURON[0]
+    neuronLogOut = np.zeros(num_bins)
+    # TODO: different size for rec layer
+    if logLayer == 0:
+        neuronLogIn = np.zeros([num_bins, len(inputKernels[0])])
+    else:
+        neuronLogIn = np.zeros([num_bins, len(hiddenKernels[logLayer-1, 0])])
+    pass
+else:
+    logLayer = None
 
 def inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels, eventInput):
     # init layers
@@ -34,7 +48,9 @@ def inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels, eventInp
 
     # run input layer
     inputLayer.assignLayer(eventInput, inputKernels, inputNeurons)
-    inputNeurons, ffQ, _ = inputLayer.forward()
+    inLog = neuronLogIn if logLayer == 0 else None
+    outLog = neuronLogOut if logLayer == 0 else None
+    inputNeurons, ffQ, _ = inputLayer.forward(inLog, outLog)
     print("%d spikes in input layer" %(len(ffQ)))
     num_spikes = len(ffQ)
 
@@ -48,12 +64,14 @@ def inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels, eventInp
         except ValueError as ve:
             rec = False
 
+        inLog = neuronLogIn if logLayer == l+1  else None
+        outLog = neuronLogOut if logLayer == l+1  else None
         if rec:
             convLayer.assignLayer(ffQ, hiddenKernels[l], hiddenNeurons[l], recQueues[recInd], recKernels[recInd])
-            hiddenNeurons[l], ffQ, recQueues[recInd]= convLayer.forward()
+            hiddenNeurons[l], ffQ, recQueues[recInd]= convLayer.forward(inLog, outLog)
         else:
             convLayer.assignLayer(ffQ, hiddenKernels[l], hiddenNeurons[l])
-            hiddenNeurons[l], ffQ, _ = convLayer.forward()
+            hiddenNeurons[l], ffQ, _ = convLayer.forward(inLog, outLog)
 
         print("%d spikes in layer %d" %(len(ffQ), l+1))
         num_spikes += len(ffQ)

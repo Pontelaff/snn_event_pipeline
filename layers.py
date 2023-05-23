@@ -83,10 +83,15 @@ class ConvLayer:
 
         return updatedNeurons
 
-    def forward(self) -> Tuple[List, SpikeQueue, SpikeQueue]:
+    def forward(self, neuronInLog = None, neuronOutLog = None) -> Tuple[List, SpikeQueue, SpikeQueue]:
         """
         This function processes events from an input queue, updates neurons, and generates new events
         for an output queue.
+
+        @param neuronInLog A numpy array used to log all weighted input spikes seperated by channel
+        and time bins for the observed neuron.
+        @param neuronOutLog A numpy array used to log all output spikes seperated by time bins for the
+        observed neuron.
 
         @return a tuple containing a list of neurons states, an event queue and the timestamp of the last update
         """
@@ -98,7 +103,7 @@ class ConvLayer:
 
             self.neurocores[c].loadNeurons(s, self.neurons)
             self.neurocores[c].leakNeurons()
-            updatedNeurons = self.neurocores[c].applyConv(recSpike)
+            updatedNeurons = self.neurocores[c].applyConv(neuronInLog, neuronOutLog, recSpike)
             updatedNeurons = self.generateSpikes(updatedNeurons, c)
             self.updateNeurons(s.x, s.y, updatedNeurons)
 

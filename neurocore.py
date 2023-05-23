@@ -3,12 +3,30 @@ from utils import Spike, SpikeQueue
 from typing import Tuple
 from numpy.typing import ArrayLike
 
-LEAK_RATE = 0.17
+#interesting neuron: l = 0, ch = 1, y = 12, x = 152, (18 spikes)
+LOG_NEURON = (0, 15, 15, 15) #Layer, Channel, x, y
+LOG_BINSIZE = 500
+LEAK_RATE = 0.90
 U_RESET = 0
 U_THRESH = 1
 REC_DELAY = 10
 REFRACTORY_PERIOD = 20
 
+def areNeighbours(x_off, y_off, kernelSize) -> bool:
+    """
+    The function checks if two neurons with a given offset to each other are neighbours within a given
+    kernel size and thus affected by the same kernel.
+
+    @param x_off The horizontal offset between the neurons.
+    @param y_off The vertical offset between the neurons.
+    @param kernelSize The size of the square kernel. It is used to determine the maximum distance between
+    two neurons for them to be considered neighbors.
+
+    @return A boolean value indicating whether the neurons with distance `x_off, y_off` are neigbours
+    based on the given kernel size.
+    """
+    neighbours = max(abs(x_off), abs(y_off)) <= kernelSize//2
+    return neighbours
 
 def applyLeak(u, t_last, t_now) -> np.float16:
     """
@@ -101,12 +119,16 @@ class Neurocore:
         self.spikeConv = self.spikeLeak
         self.neuronStatesConv = self.neuronStatesLeak.copy()
 
-    def applyConv(self, recurrent = False) -> ArrayLike:
+    def applyConv(self, neuronInLog = None, neuronOutLog = None, recurrent = False) -> ArrayLike:
         """
         This function performs the convolution operations for neurons neighbouring the current spike
         and one channel (specified by the neurocore) of each kernel. Each kernel will then apply the
         respective weights to a different channel of the current layer.
 
+        @param neuronInLog A numpy array used to log all weighted input spikes seperated by channel
+        and time bins for the observed neuron.
+        @param neuronOutLog A numpy array used to log all output spikes seperated by time bins for the
+        observed neuron.
         @param recurrent A boolean parameter that indicates whether the convolution operation is being
         performed for a recurrent spike or not. If it is True, then the recurrent kernels will
         be used instead of the regular kernels.
@@ -121,6 +143,16 @@ class Neurocore:
         self.neuronStatesConv['u'][updateIndices] += kernels[updateIndices]#*inCurrentLeak
         self.neuronStatesConv['t'][updateIndices] = self.spikeConv.t
 
+        # log neuron activities
+        if neuronInLog is not None:
+            ln = LOG_NEURON
+            x_offset = self.spikeConv.x - ln[2]
+            y_offset = self.spikeConv.y - ln[3]
+            bin = self.spikeConv.t//LOG_BINSIZE
+            if areNeighbours(x_offset, y_offset, self.kernelSize):
+                neuronInLog[bin, self.spikeConv.c] += kernels[ln[1], x_offset + 1, y_offset+1]
+                if (self.neuronStatesConv[ln[1], x_offset + 1, y_offset+1]['u'] >= U_THRESH):
+                    neuronOutLog[bin] += 1
 
         return self.neuronStatesConv
 
