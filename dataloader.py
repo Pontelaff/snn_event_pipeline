@@ -6,6 +6,9 @@ from typing import Tuple
 from models.model import FireNet, LIFFireNet
 from utils import SpikeQueue, Spike
 
+FRAME_OFFSET = (300, 0)
+TIME_START = 80000
+TIME_STOP = 180000
 
 def loadKernels(modelPath) -> Tuple:
     """
@@ -35,7 +38,7 @@ def loadKernels(modelPath) -> Tuple:
 
     return (inputKernels, hiddenKernels, recKernels, outputKernels)
 
-def loadEvents(filePath, numEvents = -1) -> SpikeQueue:
+def loadEvents(filePath, frameWidth, frameHeight, numEvents = -1) -> SpikeQueue:
     """
     This function loads events from a specified file path, filters them based on certain criteria,
     subtracts an offset to start at t=0, and returns a list of Spike objects.
@@ -58,15 +61,16 @@ def loadEvents(filePath, numEvents = -1) -> SpikeQueue:
         file.close()
 
         # filter a 32x32 window of the dropping cup
-        mask = (events[:, 0] >= 300) & (events[:, 0] <= 331) & (events[:, 1] <= 31) &\
-            (events[:,3] >= 80000) & (events[:,3] <= 180000)
+        mask = (events[:, 0] >= FRAME_OFFSET[0]) & (events[:, 0] <= FRAME_OFFSET[0] + frameWidth-1) &\
+            (events[:, 1] >= FRAME_OFFSET[1]) & (events[:, 1] <= FRAME_OFFSET[1] + frameHeight-1) &\
+            (events[:, 3] >= TIME_START) & (events[:,3] <= TIME_STOP)
         ev = events[mask]
 
         # subtract offset to start at t = 0
         t_offset = ev[0,3]
         ev[:,3] -= t_offset
 
-        spikeQueue = [Spike(ev[i][0]-300, ev[i][1], int(ev[i][2]), ev[i][3]) for i in range(len(ev))]
+        spikeQueue = [Spike(ev[i][0]-FRAME_OFFSET[0], ev[i][1]-FRAME_OFFSET[1], int(ev[i][2]), ev[i][3]) for i in range(len(ev))]
         print(f"{len(spikeQueue)} input events read from {filePath}\n")
     else:
         print("File not found at " + filePath + "\n")
