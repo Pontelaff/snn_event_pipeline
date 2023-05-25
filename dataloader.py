@@ -6,7 +6,7 @@ from typing import Tuple
 from models.model import FireNet, LIFFireNet
 from utils import SpikeQueue, Spike
 
-FRAME_OFFSET = (300, 0)
+FRAME_OFFSET = (240, 10)
 TIME_START = 80000
 TIME_STOP = 180000
 
@@ -37,6 +37,27 @@ def loadKernels(modelPath) -> Tuple:
     outputKernels = np.flip(model.pred.conv2d.weight.detach().numpy(), axis=(-2, -1))
 
     return (inputKernels, hiddenKernels, recKernels, outputKernels)
+
+def loadEventsFromArr(arrPath) -> SpikeQueue:
+    """
+    The function loads events from a numpy array and creates a SpikeQueue object containing the events.
+
+    @param arrPath The path to a numpy array file containing event data.
+
+    @return A list of Spike tuples, which is assigned to the variable `spikeQueue`.
+    """
+    eventArr = np.load(arrPath)
+    eventIdx = np.where(eventArr >= 1)
+
+    spikeQueue = []
+    for t, c, y, x in zip(*eventIdx):
+        spikeNum = int(eventArr[t, c, y, x])
+        for _ in range(spikeNum):
+            spikeQueue.append(Spike(x, y, c,t*100))
+
+    print(f"{len(spikeQueue)} input events read from {arrPath}\n")
+
+    return spikeQueue
 
 def loadEvents(filePath, frameWidth, frameHeight, numEvents = -1) -> SpikeQueue:
     """
