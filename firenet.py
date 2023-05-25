@@ -1,18 +1,18 @@
 import numpy as np
 from layers import ConvLayer
 from timeit import timeit
-from dataloader import loadKernels, loadEvents
+from dataloader import loadKernels, loadEvents, loadEventsFromArr
 from utils import SpikeQueue
 from neurocore import LOG_NEURON, LOG_BINSIZE
-from visualization import plotNeuronActivity
+from visualization import plotNeuronActivity, compNeuronLogs, compNeuronInput
 
 
 MODEL_PATH = "pretrained/LIFFireNet.pth"
 INPUT_PATH = "datasets/cup-drop-short.h5"
 NUM_INPUT = 2000000
 
-SEG_WIDTH = 32
-SEG_HEIGHT = 32
+SEG_WIDTH = 10
+SEG_HEIGHT = 10
 REC_LAYERS = (0,3)
 
 # initialise kernel weights
@@ -27,10 +27,11 @@ hiddenNeurons = np.zeros([numHiddenLayers, len(hiddenKernels[0]), SEG_WIDTH, SEG
 outputNeurons = np.zeros([len(outputKernels), SEG_WIDTH, SEG_HEIGHT], dtype=dtype)
 
 # load input events from file
-eventInput = loadEvents(INPUT_PATH, SEG_WIDTH, SEG_HEIGHT, NUM_INPUT)
+#eventInput = loadEvents(INPUT_PATH, SEG_WIDTH, SEG_HEIGHT, NUM_INPUT)
+eventInput = loadEventsFromArr('test_sequences/test_input_seq.npy')
 
 if LOG_NEURON is not None:
-    num_bins = eventInput[-1].t//LOG_BINSIZE
+    num_bins = eventInput[-1].t//LOG_BINSIZE +1
     logLayer = LOG_NEURON[0]
     neuronLogOut = np.zeros(num_bins)
     # TODO: different size for rec layer
@@ -58,7 +59,7 @@ def inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels, eventInp
     recQueues = [SpikeQueue() for _ in range(len(REC_LAYERS))]
 
     # run hidden layers
-    for l in range(numHiddenLayers):
+    for l in range(0): # disabled for debugging
         try:
             recInd = REC_LAYERS.index(l)
             rec = True
@@ -83,7 +84,13 @@ runs=1
 time = timeit(lambda: inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels, eventInput), number=runs)
 print(f"Time: {time/runs:.6f}")
 
-plotNeuronActivity(neuronLogIn, neuronLogOut)
+np.save('test_sequences/neuronLogIn.npy', neuronLogIn)
+np.save('test_sequences/neuronLogOut.npy', neuronLogOut)
+
+compNeuronInput('test_sequences/test_input_seq.npy', 'test_sequences/neuronLogIn.npy')
+compNeuronLogs('test_sequences/test_input_seq.npy', 'test_sequences/neuronLogIn.npy', 'test_sequences/test_output_seq.npy', 'test_sequences/neuronLogOut.npy')
+
+#plotNeuronActivity(neuronLogIn, neuronLogOut)
 
 #print(" c  x  y  t")
 # while outQ.qsize() > 0:
