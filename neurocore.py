@@ -3,14 +3,13 @@ from utils import Spike, SpikeQueue
 from typing import Tuple
 from numpy.typing import ArrayLike
 
-#interesting neuron: l = 0, ch = 1, y = 12, x = 152, (18 spikes)
-LOG_NEURON = (0, 15, 15, 15) #Layer, Channel, x, y
-LOG_BINSIZE = 500
-LEAK_RATE = 0.90
+LOG_NEURON = (0, 1, 1, 1) #Layer, Channel, x, y
+LOG_BINSIZE = 100
+LEAK_RATE = 0.97
 U_RESET = 0
-U_THRESH = 1
-REC_DELAY = 10
-REFRACTORY_PERIOD = 20
+U_THRESH = 0.4
+REC_DELAY = 50
+REFRACTORY_PERIOD = 50
 
 def areNeighbours(x_off, y_off, kernelSize) -> bool:
     """
@@ -148,8 +147,8 @@ class Neurocore:
             ln = LOG_NEURON
             x_offset = self.spikeConv.x - ln[2]
             y_offset = self.spikeConv.y - ln[3]
-            bin = self.spikeConv.t//LOG_BINSIZE
             if areNeighbours(x_offset, y_offset, self.kernelSize):
+                bin = self.spikeConv.t//LOG_BINSIZE
                 neuronInLog[bin, self.spikeConv.c] += kernels[ln[1], x_offset + 1, y_offset+1]
                 if (self.neuronStatesConv[ln[1], x_offset + 1, y_offset+1]['u'] >= U_THRESH):
                     neuronOutLog[bin] += 1
