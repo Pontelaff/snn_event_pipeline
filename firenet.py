@@ -31,12 +31,14 @@ outputNeurons = np.zeros([len(outputKernels), SEG_WIDTH, SEG_HEIGHT], dtype=dtyp
 eventInput = loadEventsFromArr('test_sequences/test_input_seq.npy')
 
 if LOG_NEURON is not None:
-    num_bins = eventInput[-1].t//LOG_BINSIZE +1
+    num_bins = eventInput[-1].t//LOG_BINSIZE + 10
     logLayer = LOG_NEURON[0]
     neuronLogOut = np.zeros(num_bins)
     # TODO: different size for rec layer
     if logLayer == 0:
         neuronLogIn = np.zeros([num_bins, len(inputKernels[0])])
+    elif REC_LAYERS.count(logLayer-1):
+        neuronLogIn = np.zeros([num_bins, len(hiddenKernels[0])*2])
     else:
         neuronLogIn = np.zeros([num_bins, len(hiddenKernels[logLayer-1, 0])])
     pass

@@ -149,7 +149,7 @@ class Neurocore:
             y_offset = self.spikeConv.y - ln[3]
             if areNeighbours(x_offset, y_offset, self.kernelSize):
                 bin = self.spikeConv.t//LOG_BINSIZE
-                neuronInLog[bin, self.spikeConv.c] += kernels[ln[1], x_offset + 1, y_offset+1]
+                neuronInLog[bin, self.spikeConv.c + int(recurrent) * 32] += kernels[ln[1], x_offset + 1, y_offset+1]
                 if (self.neuronStatesConv[ln[1], x_offset + 1, y_offset+1]['u'] >= U_THRESH):
                     neuronOutLog[bin] += 1
 

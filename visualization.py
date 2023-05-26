@@ -99,13 +99,20 @@ def compNeuronInput(pytorchArrPath, ownArrPath):
     # Display the figure
     plt.show()
 
+def cropLogs(logA, logB):
+    length = min(len(logA), len(logB))
+    logA = logA[:length]
+    logB = logB[:length]
+
+    return logA, logB
 
 def compNeuronLogs(pytorchArrInPath, ownArrInPath, pytorchArrOutPath, ownArrOutPath):
     pytorchIn = np.load(pytorchArrInPath)
     pytorchInSum = np.sum(pytorchIn, axis= (-1,-2))
-    pytorchOut = np.load(pytorchArrOutPath)[:-2, 1]
+    pytorchOut = np.load(pytorchArrOutPath)[:, 1]
     ownIn = np.load(ownArrInPath)
     ownOut = np.load(ownArrOutPath)
+    ownOut, pytorchOut = cropLogs(ownOut, pytorchOut)
 
      # Create the figure and subplots
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 6))
