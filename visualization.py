@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from neurocore import LOG_NEURON
 
 
 
@@ -59,7 +60,7 @@ def compNeuronInput(pytorchArrPath, ownArrPath):
     pytorchSum = np.sum(pytorch, axis= (-1,-2))
     own = np.load(ownArrPath)
 
-     # Create the figure and subplots
+    # Create the figure and subplots
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 6))
 
     # Plot the stacked graph
@@ -97,7 +98,7 @@ def compNeuronInput(pytorchArrPath, ownArrPath):
     # Add a title to the figure
     #fig.suptitle('Spiking behaviour of a single neuron')
     # Display the figure
-    plt.show()
+    #plt.show()
 
 def cropLogs(logA, logB):
     length = min(len(logA), len(logB))
@@ -109,7 +110,7 @@ def cropLogs(logA, logB):
 def compNeuronLogs(pytorchArrInPath, ownArrInPath, pytorchArrOutPath, ownArrOutPath):
     pytorchIn = np.load(pytorchArrInPath)
     pytorchInSum = np.sum(pytorchIn, axis= (-1,-2))
-    pytorchOut = np.load(pytorchArrOutPath)[:, 1]
+    pytorchOut = np.load(pytorchArrOutPath)[:, LOG_NEURON[1]]
     ownIn = np.load(ownArrInPath)
     ownOut = np.load(ownArrOutPath)
     ownOut, pytorchOut = cropLogs(ownOut, pytorchOut)
