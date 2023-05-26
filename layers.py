@@ -97,8 +97,15 @@ class ConvLayer:
         """
 
         while len(self.inQueue) > 0:
-            recSpike = (self.inQueue[0].t < self.recQueue[0].t) if (len(self.recQueue) > 0) else False
-            s = self.recQueue.pop(0) if recSpike else self.inQueue.pop(0)
+            if (len(self.recQueue) > 0):
+                recSpike = (self.inQueue[0].t > self.recQueue[0].t)
+            else:
+                recSpike = False
+
+            if recSpike:
+                s = self.recQueue.pop(0)
+            else:
+                s = self.inQueue.pop(0)
             c = s.c
 
             self.neurocores[c].loadNeurons(s, self.neurons)
