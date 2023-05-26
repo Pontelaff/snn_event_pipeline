@@ -28,10 +28,10 @@ outputNeurons = np.zeros([len(outputKernels), SEG_WIDTH, SEG_HEIGHT], dtype=dtyp
 
 # load input events from file
 #eventInput = loadEvents(INPUT_PATH, SEG_WIDTH, SEG_HEIGHT, NUM_INPUT)
-eventInput = loadEventsFromArr('test_sequences/test_input_seq.npy')
+eventInput = loadEventsFromArr('test_sequences/G1_input_seq.npy')
 
 if LOG_NEURON is not None:
-    num_bins = eventInput[-1].t//LOG_BINSIZE + 10
+    num_bins = eventInput[-1].t//LOG_BINSIZE + 1
     logLayer = LOG_NEURON[0]
     neuronLogOut = np.zeros(num_bins)
     # TODO: different size for rec layer
@@ -44,6 +44,18 @@ if LOG_NEURON is not None:
     pass
 else:
     logLayer = None
+
+
+
+def testNeuronActivityG1(hiddenNeurons, hiddenKernels, spikeInput):
+    convLayer = ConvLayer(len(hiddenKernels[0, 0]), len(hiddenKernels[0]), len(hiddenKernels[0, 0, 0]), dtype)
+    recQueue = SpikeQueue()
+
+    convLayer.assignLayer(spikeInput, hiddenKernels[0], hiddenNeurons[0], recQueue, recKernels[0])
+    hiddenNeurons[0], ffQ, recQueue = convLayer.forward(neuronLogIn, neuronLogOut)
+
+    print("%d spikes in layer G1" %(len(ffQ)))
+
 
 def inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels, eventInput):
     # init layers
@@ -61,7 +73,7 @@ def inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels, eventInp
     recQueues = [SpikeQueue() for _ in range(len(REC_LAYERS))]
 
     # run hidden layers
-    for l in range(0): # disabled for debugging
+    for l in range(numHiddenLayers):
         try:
             recInd = REC_LAYERS.index(l)
             rec = True
@@ -83,14 +95,15 @@ def inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels, eventInp
     return num_spikes
 
 runs=1
-time = timeit(lambda: inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels, eventInput), number=runs)
+#time = timeit(lambda: inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels, eventInput), number=runs)
+time = timeit(lambda: testNeuronActivityG1(hiddenNeurons, hiddenKernels, eventInput), number=runs)
 print(f"Time: {time/runs:.6f}")
 
 np.save('test_sequences/neuronLogIn.npy', neuronLogIn)
 np.save('test_sequences/neuronLogOut.npy', neuronLogOut)
 
-compNeuronInput('test_sequences/test_input_seq.npy', 'test_sequences/neuronLogIn.npy')
-compNeuronLogs('test_sequences/test_input_seq.npy', 'test_sequences/neuronLogIn.npy', 'test_sequences/test_output_seq.npy', 'test_sequences/neuronLogOut.npy')
+compNeuronInput('test_sequences/G1_input_seq.npy', 'test_sequences/neuronLogIn.npy')
+compNeuronLogs('test_sequences/G1_input_seq.npy', 'test_sequences/neuronLogIn.npy', 'test_sequences/G1_output_seq.npy', 'test_sequences/neuronLogOut.npy')
 
 #plotNeuronActivity(neuronLogIn, neuronLogOut)
 
