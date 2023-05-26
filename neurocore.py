@@ -138,9 +138,23 @@ class Neurocore:
         """
         #inCurrentLeak = (1-LEAK_RATE)
         kernels = self.recKernels if recurrent else self.kernels
-        updateIndices = np.where((self.neuronStatesConv['u'] != U_RESET) | (self.neuronStatesConv['t'] < self.spikeConv.t - REFRACTORY_PERIOD))
-        self.neuronStatesConv['u'][updateIndices] += kernels[updateIndices]#*inCurrentLeak
-        self.neuronStatesConv['t'][updateIndices] = self.spikeConv.t
+        #updateIndices = np.where((self.neuronStatesConv['u'] != U_RESET) | (self.neuronStatesConv['t'] < self.spikeConv.t - REFRACTORY_PERIOD))
+        #self.neuronStatesConv['u'][updateIndices] += kernels[updateIndices]#*inCurrentLeak
+        #self.neuronStatesConv['t'][updateIndices] = self.spikeConv.t
+
+        # updateKernel = np.where(((self.neuronStatesConv['u'] != U_RESET) | (self.neuronStatesConv['t'] < self.spikeConv.t - REFRACTORY_PERIOD)), kernels, 0)
+        # updatedTime = np.where((self.neuronStatesConv['u'] != U_RESET) | (self.neuronStatesConv['t'] < self.spikeConv.t - REFRACTORY_PERIOD), self.spikeConv.t, self.neuronStatesConv['t'])
+        # self.neuronStatesConv['u'] += updateKernel#*inCurrentLeak
+        # self.neuronStatesConv['t'] = updatedTime
+
+        timeMask = self.neuronStatesConv['t'] < (self.spikeConv.t.item() - REFRACTORY_PERIOD)
+        resetMask = self.neuronStatesConv['u'] != U_RESET
+        updateMask = np.logical_or(timeMask, resetMask)
+        potentialUpdates = kernels * updateMask
+        timeUpdates = self.spikeConv.t * updateMask + self.neuronStatesConv['t']* np.logical_not(updateMask)
+        self.neuronStatesConv['u'] += potentialUpdates
+        self.neuronStatesConv['t'] = timeUpdates
+
 
         # log neuron activities
         if neuronInLog is not None:
