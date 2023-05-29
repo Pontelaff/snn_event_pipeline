@@ -5,7 +5,7 @@ from numpy.typing import ArrayLike
 
 LOG_NEURON = (1, 18, 1, 1) #Layer, Channel, x, y
 LOG_BINSIZE = 100
-LEAK_RATE = 0.90
+LEAK_RATE = 0.97
 U_RESET = 0
 U_THRESH = 0.4
 REC_DELAY = 100
