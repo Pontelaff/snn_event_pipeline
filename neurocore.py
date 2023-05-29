@@ -3,12 +3,12 @@ from utils import Spike, SpikeQueue
 from typing import Tuple
 from numpy.typing import ArrayLike
 
-LOG_NEURON = (0, 1, 1, 1) #Layer, Channel, x, y
+LOG_NEURON = (1, 18, 1, 1) #Layer, Channel, x, y
 LOG_BINSIZE = 100
-LEAK_RATE = 0.97
+LEAK_RATE = 0.90
 U_RESET = 0
 U_THRESH = 0.4
-REC_DELAY = 50
+REC_DELAY = 100
 REFRACTORY_PERIOD = 50
 
 def areNeighbours(x_off, y_off, kernelSize) -> bool:
