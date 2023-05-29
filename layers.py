@@ -98,20 +98,25 @@ class ConvLayer:
 
         while len(self.inQueue) > 0:
             if (len(self.recQueue) > 0):
-                recSpike = (self.inQueue[0].t > self.recQueue[0].t)
+                spikeIsRec = (self.inQueue[0].t > self.recQueue[0].t)
             else:
-                recSpike = False
+                spikeIsRec = False
 
-            if recSpike:
+            if spikeIsRec:
                 s = self.recQueue.pop(0)
             else:
                 s = self.inQueue.pop(0)
             c = s.c
 
-            self.neurocores[c].loadNeurons(s, self.neurons)
-            self.neurocores[c].leakNeurons()
-            updatedNeurons = self.neurocores[c].applyConv(neuronInLog, neuronOutLog, recSpike)
-            updatedNeurons = self.generateSpikes(updatedNeurons, c)
+            # self.neurocores[c].loadNeurons(s, self.neurons)
+            # self.neurocores[c].leakNeurons()
+            # updatedNeurons = self.neurocores[c].applyConv(neuronInLog, neuronOutLog, isRecurrent)
+            # updatedNeurons = self.generateSpikes(updatedNeurons, c)
+
+            updatedNeurons, newEvents, recEvents = self.neurocores[c].forward(s, self.neurons, spikeIsRec, self.recurrent, neuronInLog, neuronOutLog)
+
             self.updateNeurons(s.x, s.y, updatedNeurons)
+            self.outQueue.extend(newEvents)
+            self.recQueue.extend(recEvents)
 
         return self.neurons, self.outQueue, self.recQueue

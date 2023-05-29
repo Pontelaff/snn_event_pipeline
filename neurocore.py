@@ -118,7 +118,7 @@ class Neurocore:
         self.spikeConv = self.spikeLeak
         self.neuronStatesConv = self.neuronStatesLeak.copy()
 
-    def applyConv(self, neuronInLog = None, neuronOutLog = None, recurrent = False) -> ArrayLike:
+    def applyConv(self, recSpike, recLayer,  neuronInLog = None, neuronOutLog = None) -> ArrayLike:
         """
         This function performs the convolution operations for neurons neighbouring the current spike
         and one channel (specified by the neurocore) of each kernel. Each kernel will then apply the
@@ -137,7 +137,7 @@ class Neurocore:
         NOTE: multiply incoming current with (1 - leak)?
         """
         #inCurrentLeak = (1-LEAK_RATE)
-        kernels = self.recKernels if recurrent else self.kernels
+        kernels = self.recKernels if recSpike else self.kernels
         #updateIndices = np.where((self.neuronStatesConv['u'] != U_RESET) | (self.neuronStatesConv['t'] < self.spikeConv.t - REFRACTORY_PERIOD))
         #self.neuronStatesConv['u'][updateIndices] += kernels[updateIndices]#*inCurrentLeak
         #self.neuronStatesConv['t'][updateIndices] = self.spikeConv.t
@@ -163,13 +163,15 @@ class Neurocore:
             y_offset = ln[3] - self.spikeConv.y
             if areNeighbours(x_offset, y_offset, self.kernelSize):
                 bin = self.spikeConv.t//LOG_BINSIZE
-                neuronInLog[bin, self.spikeConv.c + int(recurrent) * 32] += kernels[ln[1], x_offset + 1, y_offset+1]
+                neuronInLog[bin, self.spikeConv.c + int(recSpike) * 32] += kernels[ln[1], x_offset + 1, y_offset+1]
                 if (self.neuronStatesConv[ln[1], x_offset + 1, y_offset+1]['u'] >= U_THRESH):
                     neuronOutLog[bin] += 1
 
-        return self.neuronStatesConv
+        events, recEvents = self.checkThreshold(recLayer)
 
-    def checkThreshold(self, neurons : ArrayLike, recurrent = False) -> Tuple[ArrayLike, SpikeQueue, SpikeQueue]:
+        return events, recEvents
+
+    def checkThreshold(self, recurrent = False) -> Tuple[ArrayLike, SpikeQueue, SpikeQueue]:
         """
         This function checks if the neuron states exceed a threshold potential, resets them if they do,
         and adds a spike event to a queue.
@@ -179,20 +181,43 @@ class Neurocore:
         @return A tuple containing the updated neuron states, a list of spike events and recurrent spike events
         triggered by the incoming spike.
 
-        NOTE: Technically doesn't need to be part of the class, but will be performed by the Neurocore in
-        Hardware.
-        NOTE: Returning empty queue for non-recurrent layers isn't optimal on hardware.
         TODO: reset negative states?
         """
         # Get indices of all neurons that exceed U_THRESH
-        exceed_indices = np.where(neurons['u'] > U_THRESH)
+        exceed_indices = np.where(self.neuronStatesConv['u'] >= U_THRESH)
         # Reset potential of all exceeded neurons
-        neurons['u'][exceed_indices] = U_RESET
+        #self.neuronStatesConv[exceed_indices]['u'] = U_RESET
+
+        u = np.array(self.neuronStatesConv['u'])
+        u[u >= U_THRESH] = U_RESET
+        self.neuronStatesConv['u'] = u
+
+
+
+        # resetMask = self.neuronStatesConv['u'] >= U_THRESH
+        # if len(resetMask[0] > 0):
+        #     print("bp")
+        # # Reset potential of all exceeded neurons
+        # self.neuronStatesConv['u'] = self.neuronStatesConv['u'] * np.logical_not(resetMask)
+
         # Extract the timestamps of exceeded neurons and create corresponding events
-        events = [Spike(x, y, c, neurons[c, x, y]['t']) for c, x, y in zip(*exceed_indices)]
-        if recurrent and len(events) > 0:
-            recEvents = [Spike(x, y, c, neurons[c, x, y]['t'] + REC_DELAY) for c, x, y in zip(*exceed_indices)]
+        events = [Spike(x, y, c, self.neuronStatesConv[c, x, y]['t']) for c, x, y in zip(*exceed_indices)]
+        if recurrent and (len(events) > 0):
+            recEvents = [Spike(x, y, c, self.neuronStatesConv[c, x, y]['t'] + REC_DELAY) for c, x, y in zip(*exceed_indices)]
         else:
             recEvents = SpikeQueue()
 
-        return neurons, events, recEvents
+        return events, recEvents
+
+    def forward(self, s: Spike, neurons, recSpike, recLayer, neuronInLog = None, neuronOutLog = None)\
+                -> Tuple[ArrayLike, SpikeQueue, SpikeQueue]:
+        # load neurons into neurocore
+        self.loadNeurons(s, neurons)
+
+        # apply leak
+        self.leakNeurons()
+
+        # perform convolution and generate spikes
+        events, recEvents = self.applyConv(recSpike, recLayer, neuronInLog, neuronOutLog)
+
+        return self.neuronStatesConv, events, recEvents
