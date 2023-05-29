@@ -160,7 +160,7 @@ class Neurocore:
         if neuronInLog is not None:
             ln = LOG_NEURON
             x_offset =  ln[2] -self.spikeConv.x
-            y_offset = self.spikeConv.y - ln[3]
+            y_offset = ln[3] - self.spikeConv.y
             if areNeighbours(x_offset, y_offset, self.kernelSize):
                 bin = self.spikeConv.t//LOG_BINSIZE
                 neuronInLog[bin, self.spikeConv.c + int(recurrent) * 32] += kernels[ln[1], x_offset + 1, y_offset+1]
