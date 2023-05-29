@@ -159,7 +159,7 @@ class Neurocore:
         # log neuron activities
         if neuronInLog is not None:
             ln = LOG_NEURON
-            x_offset = self.spikeConv.x - ln[2]
+            x_offset =  ln[2] -self.spikeConv.x
             y_offset = self.spikeConv.y - ln[3]
             if areNeighbours(x_offset, y_offset, self.kernelSize):
                 bin = self.spikeConv.t//LOG_BINSIZE
