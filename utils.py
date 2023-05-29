@@ -7,4 +7,4 @@ class SpikeQueue(list):
         list.__init__(self, *args)
 
     def pop(self, i = 0) -> Spike:
-        return super().pop()
+        return super().pop(0)
