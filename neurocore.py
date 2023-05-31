@@ -3,7 +3,6 @@ from utils import Spike, SpikeQueue
 from typing import Tuple
 from numpy.typing import ArrayLike
 
-LOG_NEURON = (1, 18, 1, 1) #Layer, Channel, x, y
 LOG_BINSIZE = 100
 LEAK_RATE = 0.97
 U_RESET = 0
@@ -118,19 +117,24 @@ class Neurocore:
         self.spikeConv = self.spikeLeak
         self.neuronStatesConv = self.neuronStatesLeak.copy()
 
-    def applyConv(self, recSpike, recLayer,  neuronInLog = None, neuronOutLog = None) -> ArrayLike:
+    def applyConv(self, recSpike, recLayer,  neuronInLog = None, neuronOutLog = None, ln = None) -> ArrayLike:
         """
         This function performs the convolution operations for neurons neighbouring the current spike
         and one channel (specified by the neurocore) of each kernel. Each kernel will then apply the
         respective weights to a different channel of the current layer.
 
+        @param recSpike A boolean parameter that indicates whether the convolution operation is being
+        performed for a recurrent spike or not. If it is True, then the recurrent kernels will
+        be used instead of the regular kernels.
+        @param recLayer A boolean parameter that indicates whether the current layer is recurrent or
+        not. If it is true, all output spikes will also be added to the recurrent spike queue with an
+        added delay.
         @param neuronInLog A numpy array used to log all weighted input spikes seperated by channel
         and time bins for the observed neuron.
         @param neuronOutLog A numpy array used to log all output spikes seperated by time bins for the
         observed neuron.
-        @param recurrent A boolean parameter that indicates whether the convolution operation is being
-        performed for a recurrent spike or not. If it is True, then the recurrent kernels will
-        be used instead of the regular kernels.
+        @param ln The `ln` parameter is an optional argument that specifies a single neuron whose
+        activity should be logged. If this parameter is not provided, no neuron activity will be logged.
 
         @return The updated neuron states array after performing the convolution operation.
 
@@ -157,14 +161,13 @@ class Neurocore:
 
 
         # log neuron activities
-        if neuronInLog is not None:
-            ln = LOG_NEURON
-            x_offset =  ln[2] -self.spikeConv.x
-            y_offset = ln[3] - self.spikeConv.y
+        if ln is not None:
+            x_offset =  ln[1] -self.spikeConv.x
+            y_offset = ln[2] - self.spikeConv.y
             if areNeighbours(x_offset, y_offset, self.kernelSize):
                 bin = self.spikeConv.t//LOG_BINSIZE
-                neuronInLog[bin, self.spikeConv.c + int(recSpike) * 32] += kernels[ln[1], x_offset + 1, y_offset+1]
-                if (self.neuronStatesConv[ln[1], x_offset + 1, y_offset+1]['u'] >= U_THRESH):
+                neuronInLog[bin, self.spikeConv.c + int(recSpike) * 32] += kernels[ln[0], x_offset + 1, y_offset+1]
+                if (self.neuronStatesConv[ln[0], x_offset + 1, y_offset+1]['u'] >= U_THRESH):
                     neuronOutLog[bin] += 1
 
         events, recEvents = self.checkThreshold(recLayer)
@@ -176,7 +179,6 @@ class Neurocore:
         This function checks if the neuron states exceed a threshold potential, resets them if they do,
         and adds a spike event to a queue.
 
-        @param neurons A list of all neurons for the channel of this neurocore.
         @param recurrent Determines if recurrent spikes will be generated or not
         @return A tuple containing the updated neuron states, a list of spike events and recurrent spike events
         triggered by the incoming spike.
@@ -209,8 +211,30 @@ class Neurocore:
 
         return events, recEvents
 
-    def forward(self, s: Spike, neurons, recSpike, recLayer, neuronInLog = None, neuronOutLog = None)\
+    def forward(self, s: Spike, neurons, recSpike, recLayer, neuronInLog = None, neuronOutLog = None, loggedNeuron = None)\
                 -> Tuple[ArrayLike, SpikeQueue, SpikeQueue]:
+        """
+        This function performs forward propagation in a neural network by loading neurons, applying
+        leak, performing convolution, and generating spikes.
+
+        @param s A tuple containing coordinates and timestamp of the spike to be processed.
+        @param neurons A numpy array containing the state of each neuron in the layer.
+        @param recSpike A boolean parameter that indicates whether the convolution operation is being
+        performed for a recurrent spike or not. If it is True, then the recurrent kernels will
+        be used instead of the regular kernels.
+        @param recLayer A boolean parameter that indicates whether the current layer is recurrent or
+        not. If it is true, all output spikes will also be added to the recurrent spike queue with an
+        added delay.
+        @param neuronInLog A numpy array used to log all weighted input spikes seperated by channel
+        and time bins for the observed neuron.
+        @param neuronOutLog A numpy array used to log all output spikes seperated by time bins for the
+        observed neuron.
+        @param loggedNeuron The `loggedNeuron` parameter is an optional argument that specifies a single
+        neuron whose activity should be logged. If this parameter is not provided, no neuron activity
+        will be logged.
+
+        @return a tuple containing three elements: (updatedNeurons, generated spikes, generated recurrent spikes)
+        """
         # load neurons into neurocore
         self.loadNeurons(s, neurons)
 
@@ -218,6 +242,6 @@ class Neurocore:
         self.leakNeurons()
 
         # perform convolution and generate spikes
-        events, recEvents = self.applyConv(recSpike, recLayer, neuronInLog, neuronOutLog)
+        events, recEvents = self.applyConv(recSpike, recLayer, neuronInLog, neuronOutLog, loggedNeuron)
 
         return self.neuronStatesConv, events, recEvents

@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from neurocore import LOG_NEURON
 
 
 
@@ -107,7 +106,7 @@ def cropLogs(logA, logB):
 
     return logA, logB
 
-def compNeuronLogs(layerName):
+def compNeuronLogs(layerName, channel):
     ownArrInPath = "test_sequences/" + layerName + "_inLog.npy"
     ownArrOutPath = "test_sequences/" + layerName + "_outLog.npy"
     pytorchArrInPath = "test_sequences/" + layerName + "_input_seq.npy"
@@ -115,7 +114,7 @@ def compNeuronLogs(layerName):
 
     pytorchIn = np.load(pytorchArrInPath)
     pytorchInSum = np.sum(pytorchIn, axis= (-1,-2))
-    pytorchOut = np.load(pytorchArrOutPath)[:, LOG_NEURON[1]]
+    pytorchOut = np.load(pytorchArrOutPath)[:, channel]
     ownIn = np.load(ownArrInPath)
     ownOut = np.load(ownArrOutPath)
     ownOut, pytorchOut = cropLogs(ownOut, pytorchOut)
