@@ -107,7 +107,12 @@ def cropLogs(logA, logB):
 
     return logA, logB
 
-def compNeuronLogs(pytorchArrInPath, ownArrInPath, pytorchArrOutPath, ownArrOutPath):
+def compNeuronLogs(layerName):
+    ownArrInPath = "test_sequences/" + layerName + "_inLog.npy"
+    ownArrOutPath = "test_sequences/" + layerName + "_outLog.npy"
+    pytorchArrInPath = "test_sequences/" + layerName + "_input_seq.npy"
+    pytorchArrOutPath = "test_sequences/" + layerName + "_output_seq.npy"
+
     pytorchIn = np.load(pytorchArrInPath)
     pytorchInSum = np.sum(pytorchIn, axis= (-1,-2))
     pytorchOut = np.load(pytorchArrOutPath)[:, LOG_NEURON[1]]

@@ -32,7 +32,7 @@ def loadKernels(modelPath) -> Tuple:
 
     hiddenLayers = (model.G1, model.R1a, model.R1b, model.G2, model.R2a, model.R2b)
     hiddenKernels = np.flip(np.array([hiddenLayers[l].ff.weight.detach().numpy() for l in range(len(hiddenLayers))]), axis=(-2,-1))
-    recKernels = np.flip(np.array([model.G1.rec.weight.detach().numpy(), model.G2.rec.weight.detach().numpy()]), axis=(-2,-1))*0.5
+    recKernels = np.flip(np.array([model.G1.rec.weight.detach().numpy(), model.G2.rec.weight.detach().numpy()]), axis=(-2,-1))
 
     outputKernels = np.flip(model.pred.conv2d.weight.detach().numpy(), axis=(-2, -1))
 
