@@ -36,13 +36,11 @@ def plotNeuronActivity(neuronInputSpikes, neuronOutputSpikes):
     #ax1.set_title('Input Spike Heatmap')
 
     # Set the width and position of the bars
-    bar_width = 0.35
     num_bins = len(neuronOutputSpikes)
     bar_positions = np.arange(num_bins)
 
     # Plot the output graph
-    #ax2.bar(bar_positions - bar_width/2, neuronOutputSpikes, color='red', alpha=0.7, width=bar_width, label='Pytorch (batch based)')
-    ax2.bar(bar_positions + bar_width/2, neuronOutputSpikes, color='blue', alpha=0.7, width=bar_width, label='Own (event based)')
+    ax2.bar(bar_positions, neuronOutputSpikes, color='blue', alpha=0.7, width=0.7, label='Own (event based)')
     ax2.set_xlim(0, num_bins)
     ax2.set_ylim(0, 10)
     ax2.set_xlabel('Time Bins')
@@ -113,11 +111,14 @@ def compNeuronLogs(layerName, channel):
     pytorchArrOutPath = "test_sequences/" + layerName + "_output_seq.npy"
 
     pytorchIn = np.load(pytorchArrInPath)
-    pytorchInSum = np.sum(pytorchIn, axis= (-1,-2))
-    pytorchOut = np.load(pytorchArrOutPath)[:, channel]
     ownIn = np.load(ownArrInPath)
-    ownOut = np.load(ownArrOutPath)
-    ownOut, pytorchOut = cropLogs(ownOut, pytorchOut)
+    pytorchOutAll = np.load(pytorchArrOutPath)
+    ownOutAll = np.load(ownArrOutPath)
+
+    ownOutAll, pytorchOutAll = cropLogs(ownOutAll, pytorchOutAll)
+    pytorchInSum = np.sum(pytorchIn, axis= (-1,-2))
+    pytorchOut = pytorchOutAll[:, channel]
+    ownOut = ownOutAll[:, channel]
 
      # Create the figure and subplots
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 6))
@@ -160,7 +161,20 @@ def compNeuronLogs(layerName, channel):
     ax2.set_ylabel('Output Spikes')
     ax2.legend()
 
+    diff = np.abs(pytorchOut - ownOut)
+    err = np.count_nonzero(diff)/len(diff)
+    print("Output has an error rate of %f in channel %d" %(err, channel))
+
+    diffAll = np.abs(pytorchOutAll - ownOutAll)
+    errAll = np.count_nonzero(diffAll)/(len(diffAll)*len(diffAll[0]))
+    print("Mean error rate of %f" %(errAll))
+
+
     # Add a title to the figure
     #fig.suptitle('Spiking behaviour of a single neuron')
     # Display the figure
     plt.show()
+
+    #plt.close()
+
+    return errAll

@@ -4,9 +4,9 @@ from typing import Tuple
 from numpy.typing import ArrayLike
 
 LOG_BINSIZE = 100
-LEAK_RATE = 0.97
+LEAK_RATE = 0.17 * LOG_BINSIZE
 U_RESET = 0
-U_THRESH = 0.4
+U_THRESH = 1.0
 REC_DELAY = 100
 REFRACTORY_PERIOD = 50
 
@@ -167,8 +167,9 @@ class Neurocore:
             if areNeighbours(x_offset, y_offset, self.kernelSize):
                 bin = self.spikeConv.t//LOG_BINSIZE
                 neuronInLog[bin, self.spikeConv.c + int(recSpike) * 32] += kernels[ln[0], x_offset + 1, y_offset+1]
-                if (self.neuronStatesConv[ln[0], x_offset + 1, y_offset+1]['u'] >= U_THRESH):
-                    neuronOutLog[bin] += 1
+                for c in range(len(self.neuronStatesConv)):
+                    if (self.neuronStatesConv[c, x_offset + 1, y_offset+1]['u'] >= U_THRESH):
+                        neuronOutLog[bin][c] += 1
 
         events, recEvents = self.checkThreshold(recLayer)
 
@@ -193,8 +194,6 @@ class Neurocore:
         u = np.array(self.neuronStatesConv['u'])
         u[u >= U_THRESH] = U_RESET
         self.neuronStatesConv['u'] = u
-
-
 
         # resetMask = self.neuronStatesConv['u'] >= U_THRESH
         # if len(resetMask[0] > 0):

@@ -35,7 +35,7 @@ def testNeuronActivity(layer, channel, x_pos, y_pos):
     spikeInput = loadEventsFromArr(inPath)
 
     num_bins = spikeInput[-1].t//LOG_BINSIZE + 1
-    neuronLogOut = np.zeros(num_bins)
+    neuronLogOut = np.zeros([num_bins, len(inputKernels)])
     recQ = SpikeQueue()
     rKernels = None
     if layer == 0:
@@ -62,9 +62,9 @@ def testNeuronActivity(layer, channel, x_pos, y_pos):
     np.save("test_sequences/" + layerNames[layer] + "_outLog.npy", neuronLogOut)
 
     compNeuronInput(inPath, "test_sequences/" + layerNames[layer] + "_inLog.npy")
-    compNeuronLogs(layerNames[layer], channel)
+    err = compNeuronLogs(layerNames[layer], channel)
 
-    return
+    return err
 
 
 def inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels):
@@ -104,7 +104,7 @@ def inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels):
     return num_spikes
 
 runs=1
-#time = timeit(lambda: inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels, eventInput), number=runs)
+#time = timeit(lambda: inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels), number=runs)
 time = timeit(lambda: testNeuronActivity(1, 18, 1, 1), number=runs)
 print(f"Time: {time/runs:.6f}")
 
