@@ -27,14 +27,16 @@ def loadKernels(modelPath) -> Tuple:
         return None
 
     # extract kernels
-    # flipping is necessary as kernels are applied from previous to current layer and not from current to previous
-    inputKernels = np.flip(model.head.ff.weight.detach().numpy(), axis=(-2,-1))
+    # Kernels are saved in model as [N x C x H x W], this implementation uses [N x C x W x H]
+    # flipping is not necessary as kernels are applied from previous to current layer (not
+    # from current to previous) and therefore need to be mirrored anyway
+    inputKernels = model.head.ff.weight.detach().numpy()
 
     hiddenLayers = (model.G1, model.R1a, model.R1b, model.G2, model.R2a, model.R2b)
-    hiddenKernels = np.flip(np.array([hiddenLayers[l].ff.weight.detach().numpy() for l in range(len(hiddenLayers))]), axis=(-2,-1))
-    recKernels = np.flip(np.array([model.G1.rec.weight.detach().numpy(), model.G2.rec.weight.detach().numpy()]), axis=(-2,-1))
+    hiddenKernels = np.array([hiddenLayers[l].ff.weight.detach().numpy() for l in range(len(hiddenLayers))])
+    recKernels = np.array([model.G1.rec.weight.detach().numpy(), model.G2.rec.weight.detach().numpy()])
 
-    outputKernels = np.flip(model.pred.conv2d.weight.detach().numpy(), axis=(-2, -1))
+    outputKernels = model.pred.conv2d.weight.detach().numpy()
 
     return (inputKernels, hiddenKernels, recKernels, outputKernels)
 
