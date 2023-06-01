@@ -28,43 +28,43 @@ outputNeurons = np.zeros([len(outputKernels), SEG_WIDTH, SEG_HEIGHT], dtype=dtyp
 
 def testNeuronActivity(layer, channel, x_pos, y_pos):
 
-    layerNames = ("head", "G1", "R1a", "R1b", "G2", "R2a", "R2b")
+def logNeuron(layerNames, layerNum, neuron, threshold = None):
 
     # load input events from file
-    inPath = "test_sequences/" + layerNames[layer] + "_input_seq.npy"
+    inPath = "test_sequences/" + layerNames[layerNum] + "_input_seq.npy"
     spikeInput = loadEventsFromArr(inPath)
 
     num_bins = spikeInput[-1].t//LOG_BINSIZE + 1
     neuronLogOut = np.zeros([num_bins, len(inputKernels)])
     recQ = SpikeQueue()
     rKernels = None
-    if layer == 0:
+    if layerNum == 0:
         neuronLogIn = np.zeros([num_bins, len(inputKernels[0])])
         kernels = inputKernels
         neurons = inputNeurons
-    elif REC_LAYERS.count(layer):
+    elif REC_LAYERS.count(layerNum):
         neuronLogIn = np.zeros([num_bins, len(hiddenKernels[0])*2])
-        kernels = hiddenKernels[layer-1]
-        recInd = REC_LAYERS.index(layer)
+        kernels = hiddenKernels[layerNum-1]
+        recInd = REC_LAYERS.index(layerNum)
         rKernels = recKernels[recInd-1]
-        neurons = hiddenNeurons[layer-1]
+        neurons = hiddenNeurons[layerNum-1]
     else:
-        neuronLogIn = np.zeros([num_bins, len(hiddenKernels[layer-1, 0])])
-        kernels = hiddenKernels[layer-1]
-        neurons = hiddenNeurons[layer-1]
+        neuronLogIn = np.zeros([num_bins, len(hiddenKernels[layerNum-1, 0])])
+        kernels = hiddenKernels[layerNum-1]
+        neurons = hiddenNeurons[layerNum-1]
 
     convLayer = ConvLayer(len(kernels[0]), len(kernels), len(kernels[0, 0]), dtype)
     convLayer.assignLayer(spikeInput, kernels, neurons, recQ, rKernels)
-    neuronStates, ffQ, recQ = convLayer.forward(neuronLogIn, neuronLogOut, (channel, x_pos, y_pos))
-    print("%d spikes in layer %s" %(len(ffQ), layerNames[layer]))
+    neuronStates, ffQ, recQ = convLayer.forward(neuronLogIn, neuronLogOut, neuron)
+    print("%d spikes in layer %s" %(len(ffQ), layerNames[layerNum]))
 
-    np.save("test_sequences/" + layerNames[layer] + "_inLog.npy", neuronLogIn)
-    np.save("test_sequences/" + layerNames[layer] + "_outLog.npy", neuronLogOut)
+    np.save("test_sequences/" + layerNames[layerNum] + "_inLog.npy", neuronLogIn)
+    np.save("test_sequences/" + layerNames[layerNum] + "_outLog.npy", neuronLogOut)
 
-    compNeuronInput(inPath, "test_sequences/" + layerNames[layer] + "_inLog.npy")
-    err = compNeuronLogs(layerNames[layer], channel)
+    return neuronLogOut
 
-    return err
+
+
 
 
 def inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels):
@@ -103,11 +103,16 @@ def inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels):
 
     return num_spikes
 
+layerNames =("head", "G1", "R1a", "R1b", "G2", "R2a", "R2b")
+loggedLayer = 0
+loggedNeuron = (1, 1, 1)
 runs=1
-#time = timeit(lambda: inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels), number=runs)
-time = timeit(lambda: testNeuronActivity(1, 18, 1, 1), number=runs)
+#time = timeit(lambda: inference(), number=runs)
+time = timeit(lambda: logNeuron(layerNames, loggedLayer, loggedNeuron), number=runs)
 print(f"Time: {time/runs:.6f}")
 
+compNeuronInput(layerNames[loggedLayer])
+compNeuronLogs(layerNames[loggedLayer], loggedNeuron[0])
 
 #print(" c  x  y  t")
 # while outQ.qsize() > 0:

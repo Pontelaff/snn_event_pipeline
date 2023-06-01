@@ -52,7 +52,9 @@ def plotNeuronActivity(neuronInputSpikes, neuronOutputSpikes):
     # Display the figure
     plt.show()
 
-def compNeuronInput(pytorchArrPath, ownArrPath):
+def compNeuronInput(layerName):
+    ownArrPath = "test_sequences/" + layerName + "_inLog.npy"
+    pytorchArrPath = "test_sequences/" + layerName + "_input_seq.npy"
     pytorch = np.load(pytorchArrPath)
     pytorchSum = np.sum(pytorch, axis= (-1,-2))
     own = np.load(ownArrPath)
@@ -161,13 +163,11 @@ def compNeuronLogs(layerName, channel):
     ax2.set_ylabel('Output Spikes')
     ax2.legend()
 
-    diff = np.abs(pytorchOut - ownOut)
-    err = np.count_nonzero(diff)/len(diff)
-    print("Output has an error rate of %f in channel %d" %(err, channel))
+    hamming = np.count_nonzero(pytorchOut != ownOut)/len(pytorchOut)
+    print("Output has a Hamming distance of %f in channel %d" %(hamming, channel))
 
-    diffAll = np.abs(pytorchOutAll - ownOutAll)
-    errAll = np.count_nonzero(diffAll)/(len(diffAll)*len(diffAll[0]))
-    print("Mean error rate of %f" %(errAll))
+    hammingAll = np.count_nonzero(pytorchOutAll != ownOutAll)/(len(pytorchOutAll)*len(pytorchOutAll[0]))
+    print("Hamming distance of %f in layer %s" %(hammingAll, layerName))
 
 
     # Add a title to the figure
@@ -177,4 +177,4 @@ def compNeuronLogs(layerName, channel):
 
     #plt.close()
 
-    return errAll
+    return
