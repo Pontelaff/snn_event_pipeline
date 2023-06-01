@@ -74,11 +74,11 @@ def compNeuronInput(layerName):
     im = ax1.imshow(np.transpose(pytorchSum), cmap='viridis', aspect='auto')
     # Set the x and y-axis labels
     #ax3.set_xlabel('Time Bins')
-    ax1.set_ylabel('Weighted Input Spikes\nper Channel')
+    ax1.set_ylabel('Input Spikes\nper Channel')
 
     # Add a colorbar
     cbar = fig.colorbar(im, ax=ax1)
-    cbar.set_label('Input Current')
+    cbar.set_label('Input Spikes')
     # Add a title to the plot
     ax1.set_title('Pytorch Input Spike Heatmap')
 
@@ -127,7 +127,7 @@ def compNeuronLogs(layerName, channel):
 
     # Add a colorbar
     cbar = fig.colorbar(im, ax=ax1)
-    cbar.set_label('Input Current')
+    cbar.set_label('Input Spikes')
     # Add a title to the plot
     ax1.set_title('Pytorch Input Spike Heatmap')
 
@@ -152,7 +152,7 @@ def compNeuronLogs(layerName, channel):
     ax2.bar(bar_positions - bar_width/2, pytorchOut, color='red', alpha=0.7, width=bar_width, label='Pytorch (batch based)')
     ax2.bar(bar_positions + bar_width/2, ownOut, color='blue', alpha=0.7, width=bar_width, label='Own (event based)')
     ax2.set_xlim(0, num_bins)
-    ax2.set_ylim(0, 10)
+    #ax2.set_ylim(0, 2)
     ax2.set_xlabel('Time Bins')
     ax2.set_ylabel('Output Spikes')
     ax2.legend()
@@ -172,3 +172,21 @@ def compNeuronLogs(layerName, channel):
     #plt.close()
 
     return
+
+def plotThresholdComp(jacDistance, hamDistance, thresholds):
+    # Plotting the first line graph
+    plt.plot(thresholds, jacDistance, label='Jaccard')
+
+    # Plotting the second line graph
+    plt.plot(thresholds, hamDistance, label='Hamming')
+
+    # Adding labels and title
+    plt.xlabel('Thresholds')
+    plt.ylabel('Distance')
+    #plt.title('Two Line Graphs')
+
+    # Adding a legend
+    plt.legend()
+
+    # Display the plot
+    plt.show()

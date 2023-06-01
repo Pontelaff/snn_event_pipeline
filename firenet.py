@@ -4,7 +4,7 @@ from timeit import timeit
 from dataloader import loadKernels, loadEvents, loadEventsFromArr
 from utils import SpikeQueue, cropLogs
 from neurocore import LOG_BINSIZE
-from visualization import compNeuronLogs, compNeuronInput
+from visualization import compNeuronLogs, compNeuronInput, plotThresholdComp
 
 
 MODEL_PATH = "pretrained/LIFFireNet.pth"
@@ -78,7 +78,7 @@ def testThresholds(layerNames, layerNum, neuron, thresholds):
         ownOut, pytorchOut = cropLogs(ownOut, pytorchOut)
         matchingSpikes = np.logical_and(ownOut, pytorchOut)
         disjunctSpikes = (ownOut != pytorchOut)
-        jaccard[i] = np.count_nonzero(matchingSpikes)/(np.count_nonzero(ownOut + pytorchOut))
+        jaccard[i] = np.count_nonzero(disjunctSpikes)/(np.count_nonzero(ownOut + pytorchOut))
         hamming[i] = np.count_nonzero(disjunctSpikes)/(len(disjunctSpikes)*len(disjunctSpikes[0]))
 
     return jaccard, hamming
@@ -122,23 +122,19 @@ def inference():
 
     return num_spikes
 
-layerNames =("head", "G1", "R1a", "R1b", "G2", "R2a", "R2b")
+layerNames =("head", "G1", "R1a", "R1b", "G2", "R2a", "R2b", "pred")
 loggedLayer = 0
 loggedNeuron = (1, 1, 1)
 runs=1
 #time = timeit(lambda: inference(), number=runs)
-time = timeit(lambda: logNeuron(layerNames, loggedLayer, loggedNeuron), number=runs)
-print(f"Time: {time/runs:.6f}")
-
-thresholds = np.linspace(0.1, 2.0, 20)
-jac, ham = testThresholds(layerNames, loggedLayer, loggedNeuron, thresholds)
+#time = timeit(lambda: logNeuron(layerNames, loggedLayer, loggedNeuron), number=runs)
+#print(f"Time: {time/runs:.6f}")
 
 #compNeuronInput(layerNames[loggedLayer])
 #compNeuronLogs(layerNames[loggedLayer], loggedNeuron[0])
 
-#print(" c  x  y  t")
-# while outQ.qsize() > 0:
-#     event = outQ.get()
-#     #print("%2d %2d %2d %2d" % (event.channel, event.x_pos, event.y_pos, event.timestamp))
+thresholds = np.linspace(0.3, 2.0, 35)
+jac, ham = testThresholds(layerNames, loggedLayer, loggedNeuron, thresholds)
+plotThresholdComp(jac, ham, thresholds)
 
 pass
