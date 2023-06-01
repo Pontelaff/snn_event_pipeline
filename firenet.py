@@ -15,24 +15,27 @@ SEG_WIDTH = 10
 SEG_HEIGHT = 10
 REC_LAYERS = (1,4)
 
-# initialise kernel weights
-inputKernels, hiddenKernels, recKernels, outputKernels = loadKernels(MODEL_PATH)
 
 # define the structured data type
 dtype = np.dtype([('u', np.float16), ('t', np.int32)])
-# initialise neuron states
-numHiddenLayers = len(hiddenKernels)
-inputNeurons = np.zeros([len(inputKernels), SEG_WIDTH, SEG_HEIGHT], dtype=dtype)
-hiddenNeurons = np.zeros([numHiddenLayers, len(hiddenKernels[0]), SEG_WIDTH, SEG_HEIGHT], dtype=dtype)
-outputNeurons = np.zeros([len(outputKernels), SEG_WIDTH, SEG_HEIGHT], dtype=dtype)
 
-def testNeuronActivity(layer, channel, x_pos, y_pos):
+def initNeurons(numHiddenLayers, numInKernels, numHiddenKernels, numOutKernels):
+    # initialise neuron states
+    inputNeurons = np.zeros([numInKernels, SEG_WIDTH, SEG_HEIGHT], dtype=dtype)
+    hiddenNeurons = np.zeros([numHiddenLayers, numHiddenKernels, SEG_WIDTH, SEG_HEIGHT], dtype=dtype)
+    outputNeurons = np.zeros([numOutKernels, SEG_WIDTH, SEG_HEIGHT], dtype=dtype)
+
+    return inputNeurons, hiddenNeurons, outputNeurons
 
 def logNeuron(layerNames, layerNum, neuron, threshold = None):
 
     # load input events from file
     inPath = "test_sequences/" + layerNames[layerNum] + "_input_seq.npy"
     spikeInput = loadEventsFromArr(inPath)
+
+    # initialise kernel weights and neuron states
+    inputKernels, hiddenKernels, recKernels, outKernels = loadKernels(MODEL_PATH)
+    inputNeurons, hiddenNeurons, _ = initNeurons(len(hiddenKernels), len(inputKernels), len(hiddenKernels[0]), len(outKernels))
 
     num_bins = spikeInput[-1].t//LOG_BINSIZE + 1
     neuronLogOut = np.zeros([num_bins, len(inputKernels)])
@@ -67,7 +70,10 @@ def logNeuron(layerNames, layerNum, neuron, threshold = None):
 
 
 
-def inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels):
+def inference():
+    # initialise kernel weights and neuron states
+    inputKernels, hiddenKernels, recKernels, outKernels = loadKernels(MODEL_PATH)
+    inputNeurons, hiddenNeurons, _ = initNeurons(len(hiddenKernels), len(inputKernels), len(hiddenKernels[0]), len(outKernels))
     # init layers
     inputLayer = ConvLayer(len(inputKernels[0]), len(hiddenKernels[0]), len(hiddenKernels[0, 0, 0]), dtype)
     convLayer = ConvLayer(len(hiddenKernels[0, 0]), len(hiddenKernels[0]), len(hiddenKernels[0, 0, 0]), dtype)
@@ -84,7 +90,7 @@ def inference(inputNeurons, hiddenNeurons, inputKernels, hiddenKernels):
     recQueues = [SpikeQueue() for _ in range(len(REC_LAYERS))]
 
     # run hidden layers
-    for l in range(numHiddenLayers):
+    for l in range(len(hiddenKernels[0])):
         try:
             recInd = REC_LAYERS.index(l)
             rec = True
