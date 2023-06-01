@@ -152,7 +152,7 @@ def compNeuronLogs(layerName, channel):
     ax2.bar(bar_positions - bar_width/2, pytorchOut, color='red', alpha=0.7, width=bar_width, label='Pytorch (batch based)')
     ax2.bar(bar_positions + bar_width/2, ownOut, color='blue', alpha=0.7, width=bar_width, label='Own (event based)')
     ax2.set_xlim(0, num_bins)
-    #ax2.set_ylim(0, 2)
+    ax2.set_ylim(0, 4)
     ax2.set_xlabel('Time Bins')
     ax2.set_ylabel('Output Spikes')
     ax2.legend()
