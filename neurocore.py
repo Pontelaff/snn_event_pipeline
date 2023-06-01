@@ -6,7 +6,7 @@ from numpy.typing import ArrayLike
 LOG_BINSIZE = 100
 LEAK_RATE = 0.17 * LOG_BINSIZE
 U_RESET = 0
-U_THRESH = 1.0
+U_THRESH = 0.74
 REC_DELAY = 100
 REFRACTORY_PERIOD = 50
 

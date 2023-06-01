@@ -157,11 +157,15 @@ def compNeuronLogs(layerName, channel):
     ax2.set_ylabel('Output Spikes')
     ax2.legend()
 
-    hamming = np.count_nonzero(pytorchOut != ownOut)/len(pytorchOut)
-    print("Output has a Hamming distance of %f in channel %d" %(hamming, channel))
+    disjunctSpikes = pytorchOut != ownOut
+    hamming = np.count_nonzero(disjunctSpikes)/len(disjunctSpikes)
+    jaccard = np.count_nonzero(disjunctSpikes)/np.count_nonzero(pytorchOut + ownOut)
+    print("\nChannel %d\nHamming distance: %f\nJaccard distance: %f\n" %(channel, hamming, jaccard))
 
-    hammingAll = np.count_nonzero(pytorchOutAll != ownOutAll)/(len(pytorchOutAll)*len(pytorchOutAll[0]))
-    print("Hamming distance of %f in layer %s" %(hammingAll, layerName))
+    disjunctSpikesAll = pytorchOutAll != ownOutAll
+    hammingAll = np.count_nonzero(disjunctSpikesAll)/(len(disjunctSpikesAll)*len(disjunctSpikesAll[0]))
+    jaccardAll = np.count_nonzero(disjunctSpikesAll)/np.count_nonzero(pytorchOutAll + ownOutAll)
+    print("Layer %s\nHamming distance: %f\nJaccard distance: %f\n" %(layerName, hammingAll, jaccardAll))
 
 
     # Add a title to the figure

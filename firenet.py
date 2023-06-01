@@ -70,8 +70,8 @@ def logNeuron(layerNames, layerNum, neuron, threshold = None):
 def testThresholds(layerNames, layerNum, neuron, thresholds):
     path = "test_sequences/" + layerNames[layerNum] + "_output_seq.npy"
     pytorchOut =  np.load(path)
-    jaccard = np.zeros(len(thresholds)) # Jaccard similarity
-    hamming = np.zeros(len(thresholds)) # Jaccard similarity
+    jaccard = np.zeros(len(thresholds)) # Jaccard distance
+    hamming = np.zeros(len(thresholds)) # Hamming distance
 
     for i in range(len(thresholds)):
         ownOut = logNeuron(layerNames, layerNum, neuron, thresholds[i])
@@ -127,14 +127,14 @@ loggedLayer = 0
 loggedNeuron = (1, 1, 1)
 runs=1
 #time = timeit(lambda: inference(), number=runs)
-#time = timeit(lambda: logNeuron(layerNames, loggedLayer, loggedNeuron), number=runs)
-#print(f"Time: {time/runs:.6f}")
+time = timeit(lambda: logNeuron(layerNames, loggedLayer, loggedNeuron), number=runs)
+print(f"Time: {time/runs:.6f}")
 
-#compNeuronInput(layerNames[loggedLayer])
-#compNeuronLogs(layerNames[loggedLayer], loggedNeuron[0])
+compNeuronInput(layerNames[loggedLayer])
+compNeuronLogs(layerNames[loggedLayer], loggedNeuron[0])
 
-thresholds = np.linspace(0.3, 2.0, 35)
-jac, ham = testThresholds(layerNames, loggedLayer, loggedNeuron, thresholds)
-plotThresholdComp(jac, ham, thresholds)
+# thresholds = np.linspace(0.3, 2.0, 35)
+# jac, ham = testThresholds(layerNames, loggedLayer, loggedNeuron, thresholds)
+# plotThresholdComp(jac, ham, thresholds)
 
 pass
