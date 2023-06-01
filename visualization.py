@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from utils import cropLogs
 
 
 
@@ -98,13 +99,6 @@ def compNeuronInput(layerName):
     #fig.suptitle('Spiking behaviour of a single neuron')
     # Display the figure
     #plt.show()
-
-def cropLogs(logA, logB):
-    length = min(len(logA), len(logB))
-    logA = logA[:length]
-    logB = logB[:length]
-
-    return logA, logB
 
 def compNeuronLogs(layerName, channel):
     ownArrInPath = "test_sequences/" + layerName + "_inLog.npy"
