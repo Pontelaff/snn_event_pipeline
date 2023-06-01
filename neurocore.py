@@ -117,7 +117,7 @@ class Neurocore:
         self.spikeConv = self.spikeLeak
         self.neuronStatesConv = self.neuronStatesLeak.copy()
 
-    def applyConv(self, recSpike, recLayer,  neuronInLog = None, neuronOutLog = None, ln = None) -> ArrayLike:
+    def applyConv(self, recSpike, recLayer,  neuronInLog = None, neuronOutLog = None, ln = None, thresh = None) -> ArrayLike:
         """
         This function performs the convolution operations for neurons neighbouring the current spike
         and one channel (specified by the neurocore) of each kernel. Each kernel will then apply the
@@ -135,6 +135,8 @@ class Neurocore:
         observed neuron.
         @param ln The `ln` parameter is an optional argument that specifies a single neuron whose
         activity should be logged. If this parameter is not provided, no neuron activity will be logged.
+        @param thresh The threshold to use during threshold check. If 'None' the default threshold constant
+        will be used.
 
         @return The updated neuron states array after performing the convolution operation.
 
@@ -161,6 +163,8 @@ class Neurocore:
 
 
         # log neuron activities
+        if thresh is None:
+            thresh = U_THRESH
         if ln is not None:
             x_offset =  ln[1] -self.spikeConv.x
             y_offset = ln[2] - self.spikeConv.y
@@ -168,34 +172,35 @@ class Neurocore:
                 bin = self.spikeConv.t//LOG_BINSIZE
                 neuronInLog[bin, self.spikeConv.c + int(recSpike) * 32] += kernels[ln[0], x_offset + 1, y_offset+1]
                 for c in range(len(self.neuronStatesConv)):
-                    if (self.neuronStatesConv[c, x_offset + 1, y_offset+1]['u'] >= U_THRESH):
+                    if (self.neuronStatesConv[c, x_offset + 1, y_offset+1]['u'] >= thresh):
                         neuronOutLog[bin][c] += 1
 
-        events, recEvents = self.checkThreshold(recLayer)
+        events, recEvents = self.checkThreshold(thresh, recLayer)
 
         return events, recEvents
 
-    def checkThreshold(self, recurrent = False) -> Tuple[ArrayLike, SpikeQueue, SpikeQueue]:
+    def checkThreshold(self, threshold, recurrent = False) -> Tuple[ArrayLike, SpikeQueue, SpikeQueue]:
         """
         This function checks if the neuron states exceed a threshold potential, resets them if they do,
         and adds a spike event to a queue.
 
+        @param threshold The threshold to use when checking the membrane potential.
         @param recurrent Determines if recurrent spikes will be generated or not
         @return A tuple containing the updated neuron states, a list of spike events and recurrent spike events
         triggered by the incoming spike.
 
         TODO: reset negative states?
         """
-        # Get indices of all neurons that exceed U_THRESH
-        exceed_indices = np.where(self.neuronStatesConv['u'] >= U_THRESH)
+        # Get indices of all neurons that exceed the threshold
+        exceed_indices = np.where(self.neuronStatesConv['u'] >= threshold)
         # Reset potential of all exceeded neurons
         #self.neuronStatesConv[exceed_indices]['u'] = U_RESET
 
         u = np.array(self.neuronStatesConv['u'])
-        u[u >= U_THRESH] = U_RESET
+        u[u >= threshold] = U_RESET
         self.neuronStatesConv['u'] = u
 
-        # resetMask = self.neuronStatesConv['u'] >= U_THRESH
+        # resetMask = self.neuronStatesConv['u'] >= threshold
         # if len(resetMask[0] > 0):
         #     print("bp")
         # # Reset potential of all exceeded neurons
@@ -210,7 +215,7 @@ class Neurocore:
 
         return events, recEvents
 
-    def forward(self, s: Spike, neurons, recSpike, recLayer, neuronInLog = None, neuronOutLog = None, loggedNeuron = None)\
+    def forward(self, s: Spike, neurons, recSpike, recLayer, neuronInLog = None, neuronOutLog = None, loggedNeuron = None, threshold = None)\
                 -> Tuple[ArrayLike, SpikeQueue, SpikeQueue]:
         """
         This function performs forward propagation in a neural network by loading neurons, applying
@@ -231,6 +236,8 @@ class Neurocore:
         @param loggedNeuron The `loggedNeuron` parameter is an optional argument that specifies a single
         neuron whose activity should be logged. If this parameter is not provided, no neuron activity
         will be logged.
+        @param threshold The threshold to use during threshold check. If 'None' the default threshold constant
+        will be used.
 
         @return a tuple containing three elements: (updatedNeurons, generated spikes, generated recurrent spikes)
         """
@@ -241,6 +248,6 @@ class Neurocore:
         self.leakNeurons()
 
         # perform convolution and generate spikes
-        events, recEvents = self.applyConv(recSpike, recLayer, neuronInLog, neuronOutLog, loggedNeuron)
+        events, recEvents = self.applyConv(recSpike, recLayer, neuronInLog, neuronOutLog, loggedNeuron, threshold)
 
         return self.neuronStatesConv, events, recEvents

@@ -83,7 +83,7 @@ class ConvLayer:
 
         return updatedNeurons
 
-    def forward(self, neuronInLog = None, neuronOutLog = None, loggedNeuron = None) -> Tuple[List, SpikeQueue, SpikeQueue]:
+    def forward(self, neuronInLog = None, neuronOutLog = None, loggedNeuron = None, threshold = None) -> Tuple[List, SpikeQueue, SpikeQueue]:
         """
         This function processes events from an input queue, updates neurons, and generates new events
         for an output queue.
@@ -95,6 +95,8 @@ class ConvLayer:
         @param loggedNeuron The `loggedNeuron` parameter is an optional argument that specifies a single
         neuron whose activity should be logged. If this parameter is not provided, no neuron activity
         will be logged.
+        @param threshold The threshold to use in the neurocore. If 'None' the default threshold constant
+        will be used.
 
         @return a tuple containing a list of neurons states, an event queue and the timestamp of the last update
         """
@@ -116,7 +118,7 @@ class ConvLayer:
             # updatedNeurons = self.neurocores[c].applyConv(neuronInLog, neuronOutLog, isRecurrent)
             # updatedNeurons = self.generateSpikes(updatedNeurons, c)
 
-            updatedNeurons, newEvents, recEvents = self.neurocores[c].forward(s, self.neurons, spikeIsRec, self.recurrent, neuronInLog, neuronOutLog, loggedNeuron)
+            updatedNeurons, newEvents, recEvents = self.neurocores[c].forward(s, self.neurons, spikeIsRec, self.recurrent, neuronInLog, neuronOutLog, loggedNeuron, threshold)
 
             self.updateNeurons(s.x, s.y, updatedNeurons)
             self.outQueue.extend(newEvents)

@@ -2,7 +2,7 @@ import numpy as np
 from layers import ConvLayer
 from timeit import timeit
 from dataloader import loadKernels, loadEvents, loadEventsFromArr
-from utils import SpikeQueue
+from utils import SpikeQueue, cropLogs
 from neurocore import LOG_BINSIZE
 from visualization import compNeuronLogs, compNeuronInput
 
@@ -58,7 +58,7 @@ def logNeuron(layerNames, layerNum, neuron, threshold = None):
 
     convLayer = ConvLayer(len(kernels[0]), len(kernels), len(kernels[0, 0]), dtype)
     convLayer.assignLayer(spikeInput, kernels, neurons, recQ, rKernels)
-    neuronStates, ffQ, recQ = convLayer.forward(neuronLogIn, neuronLogOut, neuron)
+    neuronStates, ffQ, recQ = convLayer.forward(neuronLogIn, neuronLogOut, neuron, threshold)
     print("%d spikes in layer %s" %(len(ffQ), layerNames[layerNum]))
 
     np.save("test_sequences/" + layerNames[layerNum] + "_inLog.npy", neuronLogIn)
@@ -67,8 +67,21 @@ def logNeuron(layerNames, layerNum, neuron, threshold = None):
     return neuronLogOut
 
 
+def testThresholds(layerNames, layerNum, neuron, thresholds):
+    path = "test_sequences/" + layerNames[layerNum] + "_output_seq.npy"
+    pytorchOut =  np.load(path)
+    jaccard = np.zeros(len(thresholds)) # Jaccard similarity
+    hamming = np.zeros(len(thresholds)) # Jaccard similarity
 
+    for i in range(len(thresholds)):
+        ownOut = logNeuron(layerNames, layerNum, neuron, thresholds[i])
+        ownOut, pytorchOut = cropLogs(ownOut, pytorchOut)
+        matchingSpikes = np.logical_and(ownOut, pytorchOut)
+        disjunctSpikes = (ownOut != pytorchOut)
+        jaccard[i] = np.count_nonzero(matchingSpikes)/(np.count_nonzero(ownOut + pytorchOut))
+        hamming[i] = np.count_nonzero(disjunctSpikes)/(len(disjunctSpikes)*len(disjunctSpikes[0]))
 
+    return jaccard, hamming
 
 def inference():
     # initialise kernel weights and neuron states
@@ -117,8 +130,11 @@ runs=1
 time = timeit(lambda: logNeuron(layerNames, loggedLayer, loggedNeuron), number=runs)
 print(f"Time: {time/runs:.6f}")
 
-compNeuronInput(layerNames[loggedLayer])
-compNeuronLogs(layerNames[loggedLayer], loggedNeuron[0])
+thresholds = np.linspace(0.1, 2.0, 20)
+jac, ham = testThresholds(layerNames, loggedLayer, loggedNeuron, thresholds)
+
+#compNeuronInput(layerNames[loggedLayer])
+#compNeuronLogs(layerNames[loggedLayer], loggedNeuron[0])
 
 #print(" c  x  y  t")
 # while outQ.qsize() > 0:
