@@ -3,7 +3,6 @@ import numpy as np
 from utils import cropLogs
 
 
-
 def plotNeuronActivity(neuronInputSpikes, neuronOutputSpikes):
     """
     This function plots the spiking behavior of a single neuron, including a heatmap of weighted input
@@ -109,6 +108,8 @@ def compNeuronLogs(layerName, channel):
     pytorchIn = np.load(pytorchArrInPath)
     ownIn = np.load(ownArrInPath)
     pytorchOutAll = np.load(pytorchArrOutPath)
+    if len(pytorchOutAll.shape) > 2:
+        pytorchOutAll = pytorchOutAll[:,:,1,1]
     ownOutAll = np.load(ownArrOutPath)
 
     ownOutAll, pytorchOutAll = cropLogs(ownOutAll, pytorchOutAll)

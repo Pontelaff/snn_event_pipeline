@@ -172,7 +172,7 @@ class Neurocore:
                 bin = self.spikeConv.t//LOG_BINSIZE
                 neuronInLog[bin, self.spikeConv.c + int(recSpike) * 32] += kernels[ln[0], x_offset + 1, y_offset+1]
                 for c in range(len(self.neuronStatesConv)):
-                    if (self.neuronStatesConv[c, x_offset + 1, y_offset+1]['u'] >= thresh):
+                    if (self.neuronStatesConv[c, x_offset + 1, y_offset+1]['u'] >= thresh[c]):
                         neuronOutLog[bin][c] += 1
 
         events, recEvents = self.checkThreshold(thresh, recLayer)

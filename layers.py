@@ -122,6 +122,6 @@ class ConvLayer:
 
             self.updateNeurons(s.x, s.y, updatedNeurons)
             self.outQueue.extend(newEvents)
-            self.recQueue.extend(recEvents)
+            #self.recQueue.extend(recEvents)
 
         return self.neurons, self.outQueue, self.recQueue

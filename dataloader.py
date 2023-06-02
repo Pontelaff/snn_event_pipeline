@@ -52,7 +52,7 @@ def loadKernelsFromModel(model) -> Tuple[ArrayLike, ArrayLike, ArrayLike, ArrayL
 
     return (inputKernels, hiddenKernels, recKernels, outputKernels)
 
-def loadEventsFromArr(arrPath) -> SpikeQueue:
+def loadEventsFromArr(arrPath, recurrent = False) -> SpikeQueue:
     """
     The function loads events from a numpy array and creates a SpikeQueue object containing the events.
 
@@ -67,7 +67,7 @@ def loadEventsFromArr(arrPath) -> SpikeQueue:
     for t, c, y, x in zip(*eventIdx):
         spikeNum = int(eventArr[t, c, y, x])
         for _ in range(spikeNum):
-            spikeQueue.append(Spike(x, y, c,t*100))
+            spikeQueue.append(Spike(x, y, c,(t+int(recurrent))*100))
 
     print(f"{len(spikeQueue)} input events read from {arrPath}\n")
 

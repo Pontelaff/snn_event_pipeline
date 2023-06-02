@@ -11,8 +11,8 @@ MODEL_PATH = "pretrained/LIFFireNet.pth"
 INPUT_PATH = "datasets/cup-drop-short.h5"
 NUM_INPUT = 2000000
 
-SEG_WIDTH = 10
-SEG_HEIGHT = 10
+SEG_WIDTH = 3
+SEG_HEIGHT = 3
 REC_LAYERS = (1,4)
 
 
@@ -33,6 +33,7 @@ def logNeuron(layerNames, layerNum, neuron, threshold = None):
 
     # load input events from file
     inPath = "test_sequences/" + layerNames[layerNum] + "_input_seq.npy"
+    outPath = "test_sequences/" + layerNames[layerNum] + "_output_seq.npy"
     spikeInput = loadEventsFromArr(inPath)
 
     # initialise kernel weights and neuron states
@@ -52,6 +53,7 @@ def logNeuron(layerNames, layerNum, neuron, threshold = None):
         kernels = hiddenKernels[layerNum-1]
         recInd = REC_LAYERS.index(layerNum)
         rKernels = recKernels[recInd-1]
+        recQ = loadEventsFromArr(outPath, True)
         neurons = hiddenNeurons[layerNum-1]
     else:
         neuronLogIn = np.zeros([num_bins, len(hiddenKernels[layerNum-1, 0])])
@@ -125,8 +127,8 @@ def inference():
     return num_spikes
 
 layerNames =("head", "G1", "R1a", "R1b", "G2", "R2a", "R2b", "pred")
-loggedLayer = 0
-loggedNeuron = (1, 1, 1)
+loggedLayer = 1
+loggedNeuron = (18, 1, 1)
 runs=1
 #time = timeit(lambda: inference(), number=runs)
 # load thresholds
