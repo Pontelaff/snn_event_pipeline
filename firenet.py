@@ -1,7 +1,7 @@
 import numpy as np
 from layers import ConvLayer
 from timeit import timeit
-from dataloader import loadKernelsFromModel, loadModel, loadEvents, loadEventsFromArr
+from dataloader import loadKernelsFromModel, loadThresholdsFromModel, loadModel, loadEvents, loadEventsFromArr
 from utils import SpikeQueue, cropLogs
 from neurocore import LOG_BINSIZE
 from visualization import compNeuronLogs, compNeuronInput, plotThresholdComp
@@ -129,7 +129,9 @@ loggedLayer = 0
 loggedNeuron = (1, 1, 1)
 runs=1
 #time = timeit(lambda: inference(), number=runs)
-time = timeit(lambda: logNeuron(layerNames, loggedLayer, loggedNeuron), number=runs)
+# load thresholds
+thresholds = loadThresholdsFromModel(model)
+time = timeit(lambda: logNeuron(layerNames, loggedLayer, loggedNeuron, thresholds[loggedLayer]), number=runs)
 print(f"Time: {time/runs:.6f}")
 
 compNeuronInput(layerNames[loggedLayer])

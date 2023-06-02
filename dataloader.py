@@ -3,6 +3,7 @@ import torch
 import h5py
 import numpy as np
 from typing import Tuple
+from numpy.typing import ArrayLike
 from models.model import FireNet, LIFFireNet
 from utils import SpikeQueue, Spike
 
@@ -20,6 +21,12 @@ def loadModel(modelPath) -> LIFFireNet:
         return None
 
     return model
+
+def loadThresholdsFromModel(model) -> ArrayLike:
+    layers = (model.head, model.G1, model.R1a, model.R1b, model.G2, model.R2a, model.R2b)
+    thresholds = np.array([layers[l].thresh.detach().numpy() for l in range(len(layers))])
+
+    return thresholds
 
 def loadKernelsFromModel(model) -> Tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
     """
