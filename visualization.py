@@ -118,7 +118,7 @@ def compNeuronLogs(layerName, channel):
     ownOut = ownOutAll[:, channel]
 
      # Create the figure and subplots
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 6))
+    fig, (ax1, ax3, ax2) = plt.subplots(3, 1, figsize=(8, 6))
 
     # Plot the pytorch input heatmap
     im = ax1.imshow(np.transpose(pytorchInSum), cmap='viridis', aspect='auto')
@@ -127,10 +127,10 @@ def compNeuronLogs(layerName, channel):
     ax1.set_ylabel('Input Spikes\nper Channel')
 
     # Add a colorbar
-    cbar = fig.colorbar(im, ax=ax1)
-    cbar.set_label('Input Spikes')
+    #cbar = fig.colorbar(im, ax=ax1)
+    #cbar.set_label('Input Spikes')
     # Add a title to the plot
-    ax1.set_title('Pytorch Input Spike Heatmap')
+    ax1.set_title('Neuron Activity\nLayer ' + layerName + ' Channel ' + str(channel))
 
     # # Plot the input heatmap of the own implementation
     # im = ax2.imshow(np.transpose(own), cmap='viridis', aspect='auto')
@@ -142,7 +142,6 @@ def compNeuronLogs(layerName, channel):
     # cbar = fig.colorbar(im, ax=ax2)
     # cbar.set_label('Input Current')
     # # Add a title to the plot
-    # ax2.set_title('Own Input Spike Heatmap')
 
     # Set the width and position of the bars
     bar_width = 0.35
@@ -150,22 +149,32 @@ def compNeuronLogs(layerName, channel):
     bar_positions = np.arange(num_bins)
 
     # Plot the output graph
+    ax3.plot(bar_positions, ownOut[:,0], color='blue', alpha=0.7)
+    ax3.set_xlim(0, num_bins)
+    #ax3.set_ylim(-5, 2)
+    #ax3.set_xlabel('Time Bins')
+    ax3.set_ylabel('Membrane Potential')
+    #ax2.set_title('Neuron Activity Level')
+
+    # Plot the output graph
     ax2.bar(bar_positions - bar_width/2, pytorchOut, color='red', alpha=0.7, width=bar_width, label='Pytorch (batch based)')
-    ax2.bar(bar_positions + bar_width/2, ownOut, color='blue', alpha=0.7, width=bar_width, label='Own (event based)')
+    ax2.bar(bar_positions + bar_width/2, ownOut[:,1], color='blue', alpha=0.7, width=bar_width, label='Own (event based)')
     ax2.set_xlim(0, num_bins)
-    ax2.set_ylim(0, 4)
+    ax2.set_ylim(0, 3)
     ax2.set_xlabel('Time Bins')
     ax2.set_ylabel('Output Spikes')
     ax2.legend()
+    #ax2.set_title('Output Spike Comparison')
 
-    disjunctSpikes = pytorchOut != ownOut
+
+    disjunctSpikes = pytorchOut != ownOut[:,1]
     hamming = np.count_nonzero(disjunctSpikes)/len(disjunctSpikes)
-    jaccard = np.count_nonzero(disjunctSpikes)/np.count_nonzero(pytorchOut + ownOut)
+    jaccard = np.count_nonzero(disjunctSpikes)/np.count_nonzero(pytorchOut + ownOut[:,1])
     print("\nChannel %d\nHamming distance: %f\nJaccard distance: %f\n" %(channel, hamming, jaccard))
 
-    disjunctSpikesAll = pytorchOutAll != ownOutAll
+    disjunctSpikesAll = pytorchOutAll != ownOutAll[:,:,1]
     hammingAll = np.count_nonzero(disjunctSpikesAll)/(len(disjunctSpikesAll)*len(disjunctSpikesAll[0]))
-    jaccardAll = np.count_nonzero(disjunctSpikesAll)/np.count_nonzero(pytorchOutAll + ownOutAll)
+    jaccardAll = np.count_nonzero(disjunctSpikesAll)/np.count_nonzero(pytorchOutAll + ownOutAll[:,:,1])
     print("Layer %s\nHamming distance: %f\nJaccard distance: %f\n" %(layerName, hammingAll, jaccardAll))
 
 

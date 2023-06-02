@@ -41,7 +41,7 @@ def logNeuron(layerNames, layerNum, neuron, threshold = None):
     inputNeurons, hiddenNeurons, _ = initNeurons(len(hiddenKernels), len(inputKernels), len(hiddenKernels[0]), len(outKernels))
 
     num_bins = spikeInput[-1].t//LOG_BINSIZE + 1
-    neuronLogOut = np.zeros([num_bins, len(inputKernels)])
+    neuronLogOut = np.zeros([num_bins, len(inputKernels), 2])
     recQ = SpikeQueue()
     rKernels = None
     if layerNum == 0:
