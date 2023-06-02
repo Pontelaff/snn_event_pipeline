@@ -1,8 +1,8 @@
 # Layer Comparision
 
-This document contains tests and results comparing the layer behaviour and neuron activity of this implementation to the pytorch implementation. The input sequences used are taken from the pytorch implementation to make for an easier comparison where for each new event window the timestamp is increased by 100us.
+This document contains tests and results comparing the spiking behaviour and neuron activity of the layers introduced in this implementation to the [pytorch implementation](https://github.com/tudelft/event_flow), which was used as a reference. The input sequences used are taken from the pytorch implementation to make for a more representative comparison. Since the pytorch implementation uses an event window or batch aproach and omits time information of the input spikes, they needed to be converted in a way where for each new event window the timestamp is increased by 100us as time information is needed for the new single spike based aproach.
 
-
+The following parameters were used for testing:
 ```python
 LOG_BINSIZE = 100
 LEAK_RATE = 0.17 * LOG_BINSIZE
@@ -111,4 +111,6 @@ y_pos = 3
 Problems:
 - Adding time information to iterative spike batches might be inaccurate
 - Rec layers are missing inputs from outside their kernel window
+  - Spikes outside of the kernel widndows might lead to recurrent spikes inside the kernel window
 - Weights might need normalisation (recurrent Kernels are dominating input)
+- Using learned thresholds per kernel might improve similarity

@@ -10,7 +10,18 @@ FRAME_OFFSET = (240, 10)
 TIME_START = 80000
 TIME_STOP = 180000
 
-def loadKernels(modelPath) -> Tuple:
+def loadModel(modelPath) -> LIFFireNet:
+
+    if os.path.isfile(modelPath):
+        model = torch.load(modelPath, 'cpu')
+        print("Model restored from " + modelPath + "\n")
+    else:
+        print("No model found at" + modelPath + "\n")
+        return None
+
+    return model
+
+def loadKernelsFromModel(model) -> Tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
     """
     The function loads kernels from a saved PyTorch model and returns them as a tuple.
 
@@ -19,12 +30,6 @@ def loadKernels(modelPath) -> Tuple:
     @return A tuple containing four arrays of weights: inputKernels, hiddenKernels, recKernels, and
     outputKernels.
     """
-    if os.path.isfile(modelPath):
-        model = torch.load(modelPath, 'cpu')
-        print("Model restored from " + modelPath + "\n")
-    else:
-        print("No model found at" + modelPath + "\n")
-        return None
 
     # extract kernels
     # Kernels are saved in model as [N x C x H x W], this implementation uses [N x C x W x H]

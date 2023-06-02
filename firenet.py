@@ -1,7 +1,7 @@
 import numpy as np
 from layers import ConvLayer
 from timeit import timeit
-from dataloader import loadKernels, loadEvents, loadEventsFromArr
+from dataloader import loadKernelsFromModel, loadModel, loadEvents, loadEventsFromArr
 from utils import SpikeQueue, cropLogs
 from neurocore import LOG_BINSIZE
 from visualization import compNeuronLogs, compNeuronInput, plotThresholdComp
@@ -19,6 +19,8 @@ REC_LAYERS = (1,4)
 # define the structured data type
 dtype = np.dtype([('u', np.float16), ('t', np.int32)])
 
+model = loadModel(MODEL_PATH)
+
 def initNeurons(numHiddenLayers, numInKernels, numHiddenKernels, numOutKernels):
     # initialise neuron states
     inputNeurons = np.zeros([numInKernels, SEG_WIDTH, SEG_HEIGHT], dtype=dtype)
@@ -34,7 +36,7 @@ def logNeuron(layerNames, layerNum, neuron, threshold = None):
     spikeInput = loadEventsFromArr(inPath)
 
     # initialise kernel weights and neuron states
-    inputKernels, hiddenKernels, recKernels, outKernels = loadKernels(MODEL_PATH)
+    inputKernels, hiddenKernels, recKernels, outKernels = loadKernelsFromModel(model)
     inputNeurons, hiddenNeurons, _ = initNeurons(len(hiddenKernels), len(inputKernels), len(hiddenKernels[0]), len(outKernels))
 
     num_bins = spikeInput[-1].t//LOG_BINSIZE + 1
@@ -85,7 +87,7 @@ def testThresholds(layerNames, layerNum, neuron, thresholds):
 
 def inference():
     # initialise kernel weights and neuron states
-    inputKernels, hiddenKernels, recKernels, outKernels = loadKernels(MODEL_PATH)
+    inputKernels, hiddenKernels, recKernels, outKernels = loadKernelsFromModel(model)
     inputNeurons, hiddenNeurons, _ = initNeurons(len(hiddenKernels), len(inputKernels), len(hiddenKernels[0]), len(outKernels))
     # init layers
     inputLayer = ConvLayer(len(inputKernels[0]), len(hiddenKernels[0]), len(hiddenKernels[0, 0, 0]), dtype)
