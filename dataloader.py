@@ -30,9 +30,9 @@ def loadThresholdsFromModel(model) -> ArrayLike:
 
 def loadKernelsFromModel(model) -> Tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
     """
-    The function loads kernels from a saved PyTorch model and returns them as a tuple.
+    The function loads kernels from a saved PyTorch model and returns them as a tuple of arrays.
 
-    @param modelPath The path to the saved PyTorch model file.
+    @param model The pytorch model to load the kernel weights from.
 
     @return A tuple containing four arrays of weights: inputKernels, hiddenKernels, recKernels, and
     outputKernels.
@@ -40,15 +40,16 @@ def loadKernelsFromModel(model) -> Tuple[ArrayLike, ArrayLike, ArrayLike, ArrayL
 
     # extract kernels
     # Kernels are saved in model as [N x C x H x W], this implementation uses [N x C x W x H]
-    # flipping is not necessary as kernels are applied from previous to current layer (not
-    # from current to previous) and therefore need to be mirrored anyway
-    inputKernels = model.head.ff.weight.detach().numpy()
+    # Therefore the x and y axis first need to be swapped
+    # flipping is necessary as kernels are applied from previous to current layer which means
+    # they need to be mirrored on both x and y axis.
+    inputKernels = np.flip(np.swapaxes(model.head.ff.weight.detach().numpy(), -1, -2), axis=(-1,-2))
 
     hiddenLayers = (model.G1, model.R1a, model.R1b, model.G2, model.R2a, model.R2b)
-    hiddenKernels = np.array([hiddenLayers[l].ff.weight.detach().numpy() for l in range(len(hiddenLayers))])
-    recKernels = np.array([model.G1.rec.weight.detach().numpy(), model.G2.rec.weight.detach().numpy()])
+    hiddenKernels = np.flip(np.swapaxes(np.array([hiddenLayers[l].ff.weight.detach().numpy() for l in range(len(hiddenLayers))]), -1, -2), axis=(-1,-2))
+    recKernels = np.flip(np.swapaxes(np.array([model.G1.rec.weight.detach().numpy(), model.G2.rec.weight.detach().numpy()]), -1, -2), axis=(-1,-2))
 
-    outputKernels = model.pred.conv2d.weight.detach().numpy()
+    outputKernels = np.flip(np.swapaxes(model.pred.conv2d.weight.detach().numpy(), -1, -2), axis=(-1,-2))
 
     return (inputKernels, hiddenKernels, recKernels, outputKernels)
 
