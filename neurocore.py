@@ -6,7 +6,7 @@ from numpy.typing import ArrayLike
 LOG_BINSIZE = 100
 LEAK_RATE = 0.17 * LOG_BINSIZE
 U_RESET = 0
-U_THRESH = 0.74
+U_THRESH = 1.0
 REC_DELAY = 100
 REFRACTORY_PERIOD = 50
 
@@ -172,7 +172,8 @@ class Neurocore:
                 bin = self.spikeConv.t//LOG_BINSIZE
                 neuronInLog[bin, self.spikeConv.c + int(recSpike) * 32] += kernels[ln[0], x_offset + 1, y_offset+1]
                 for c in range(len(self.neuronStatesConv)):
-                    neuronOutLog[bin][c][0] = self.neuronStatesConv[c, x_offset + 1, y_offset+1]['u']
+                    if neuronOutLog[bin][c][1] == 0:
+                        neuronOutLog[bin][c][0] = self.neuronStatesConv[c, x_offset + 1, y_offset+1]['u']
                     if (self.neuronStatesConv[c, x_offset + 1, y_offset+1]['u'] >= thresh[c]):
                         neuronOutLog[bin][c][1] += 1
 
@@ -209,9 +210,9 @@ class Neurocore:
         # self.neuronStatesConv['u'] = self.neuronStatesConv['u'] * np.logical_not(resetMask)
 
         # Extract the timestamps of exceeded neurons and create corresponding events
-        events = [Spike(x, y, c, self.neuronStatesConv[c, x, y]['t']) for c, x, y in zip(*exceed_indices)]
+        events = [Spike(x, y, c, self.neuronStatesConv[c, x, y]['t'].item()) for c, x, y in zip(*exceed_indices)]
         if recurrent and (len(events) > 0):
-            recEvents = [Spike(x, y, c, self.neuronStatesConv[c, x, y]['t'] + REC_DELAY) for c, x, y in zip(*exceed_indices)]
+            recEvents = [Spike(x, y, c, self.neuronStatesConv[c, x, y]['t'].item() + REC_DELAY) for c, x, y in zip(*exceed_indices)]
         else:
             recEvents = SpikeQueue()
 

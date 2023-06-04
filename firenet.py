@@ -79,7 +79,7 @@ def testThresholds(layerNames, layerNum, neuron, thresholds):
 
     for i in range(len(thresholds)):
         ownOut = logNeuron(layerNames, layerNum, neuron, thresholds[i])
-        ownOut, pytorchOut = cropLogs(ownOut, pytorchOut)
+        ownOut, pytorchOut = cropLogs(ownOut[:,:,1], pytorchOut)
         matchingSpikes = np.logical_and(ownOut, pytorchOut)
         disjunctSpikes = (ownOut != pytorchOut)
         jaccard[i] = np.count_nonzero(disjunctSpikes)/(np.count_nonzero(ownOut + pytorchOut))
