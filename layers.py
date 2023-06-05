@@ -66,23 +66,6 @@ class ConvLayer:
 
         self.neurons[:, x-l:x+r+1, y-u:y+d+1] = updatedNeurons[:, 1-l:2+r, 1-u:2+d]
 
-    def generateSpikes(self, neurons, channel) -> ArrayLike:
-        """
-        This function generates spikes for a given set of neurons, and returns the updated neuron states.
-        The threshold check is performed by the neurocore, which also performed the convolution before.
-
-        @param neurons A numpy array of all neurons, which were updated by the convolution
-        @param channel The channel where the spike occured that let to the convolution opeattion.
-        Determines which neurocore will perform the threshold check.
-
-        @return The updated neurons as a numpy array.
-        """
-        (updatedNeurons, newEvents, recEvents) = self.neurocores[channel].checkThreshold(neurons, self.recurrent)
-        self.outQueue.extend(newEvents)
-        self.recQueue.extend(recEvents)
-
-        return updatedNeurons
-
     def forward(self, neuronInLog = None, neuronOutLog = None, loggedNeuron = None, threshold = None) -> Tuple[List, SpikeQueue, SpikeQueue]:
         """
         This function processes events from an input queue, updates neurons, and generates new events
