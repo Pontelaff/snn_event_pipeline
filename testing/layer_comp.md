@@ -115,6 +115,35 @@ y_pos = 3
 
 [Threshold Test R1b](thresh_R1b.png)
 
+
+## G2 Layer
+
+```python
+channel = 16
+x_pos = 7
+y_pos = 2
+```
+
+### Learned Thresholds
+
+|         | Channel 16 | Layer |
+|---------|-----------|-------|
+| Hamming | 0.259398 | 0.259164 |
+| Jaccard | 0.466216 | 0.579003 |
+
+![G2 Layer Activity](G2_out_16.png)
+
+### Threshold 1.00
+
+|         | Channel 16 | Layer |
+|---------|-----------|-------|
+| Hamming | 0.244361 | 0.232965 |
+| Jaccard | 0.460993 | 0.571141 |
+
+[G2 Layer Activity](G2_out_16_t1-00.png)
+
+[Threshold Test G2](thresh_G2.png)
+
 ## Discussion
 
 - Spiking activity in convolutional layers is roughly matching the pytorch implementation
