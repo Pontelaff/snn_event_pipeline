@@ -48,13 +48,33 @@ x_pos = 7
 y_pos = 2
 ```
 
+### Learned Threshold
+
 |         | Channel 18 | Layer |
 |---------|-----------|-------|
-| Hamming |0.492424|0.299598|
-| Jaccard |0.742857|0.617016|
+| Hamming |0.227273|0.123816|
+| Jaccard |0.320856|0.265550|
 
 
 ![G1 Layer Activity](G1_out_18_1_1.png)
+
+### Threshold 1.00
+
+|         | Channel 18 | Layer |
+|---------|-----------|-------|
+| Hamming |0.166667|0.086884|
+| Jaccard |0.258824|0.205891|
+
+[G1 Layer Activity](G1_out_18_t1-20.png)
+
+### Threshold 1.20
+
+|         | Channel 18 | Layer |
+|---------|-----------|-------|
+| Hamming |0.098485|0.066880|
+| Jaccard |0.172185|0.172414|
+
+[G1 Layer Activity](G1_out_18_t1-00.png)
 
 [Threshold Test G1](thresh_G1.png)
 
@@ -128,8 +148,8 @@ y_pos = 2
 
 |         | Channel 16 | Layer |
 |---------|-----------|-------|
-| Hamming | 0.259398 | 0.259164 |
-| Jaccard | 0.466216 | 0.579003 |
+| Hamming | 0.165414 | 0.140038 |
+| Jaccard | 0.335878 | 0.363969 |
 
 ![G2 Layer Activity](G2_out_16.png)
 
@@ -137,22 +157,31 @@ y_pos = 2
 
 |         | Channel 16 | Layer |
 |---------|-----------|-------|
-| Hamming | 0.244361 | 0.232965 |
-| Jaccard | 0.460993 | 0.571141 |
+| Hamming | 0.124060 | 0.104793 |
+| Jaccard | 0.275000 | 0.304229 |
 
 [G2 Layer Activity](G2_out_16_t1-00.png)
 
-[Threshold Test G2](thresh_G2.png)
+### Threshold 1.20
+
+|         | Channel 16 | Layer |
+|---------|-----------|-------|
+| Hamming | 0.078947 | 0.082589 |
+| Jaccard | 0.196262 | 0.266389 |
+
+
+![G2 Layer Activity](G2_out_16_t1-20.png)
 
 ## Discussion
 
 - Spiking activity in convolutional layers is roughly matching the pytorch implementation
 - Spiking activity in recurrent convolutional layers is barely matching
 - Learned thresholds are only beneficial for head Layer
+- Rec layers are missing inputs from outside their kernel window
+  - Spikes outside of the kernel widndows might lead to recurrent spikes inside the kernel window
+  - Therefore all neighbouring output spikes of the recurrent layer need to be recorded to be used as recurrent input
+
 
 Problems:
 
 - Adding time information to iterative spike batches might be inaccurate
-- Rec layers are missing inputs from outside their kernel window
-  - Spikes outside of the kernel widndows might lead to recurrent spikes inside the kernel window
-- Weights might need normalisation (recurrent Kernels are dominating input)

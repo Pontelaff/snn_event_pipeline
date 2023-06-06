@@ -52,7 +52,7 @@ def logNeuron(layerNames, layerNum, neuron, threshold = None):
         neuronLogIn = np.zeros([num_bins, len(hiddenKernels[0])*2])
         kernels = hiddenKernels[layerNum-1]
         recInd = REC_LAYERS.index(layerNum)
-        rKernels = recKernels[recInd-1]
+        rKernels = recKernels[recInd]
         recQ = loadEventsFromArr(outPath, True)
         neurons = hiddenNeurons[layerNum-1]
     else:
