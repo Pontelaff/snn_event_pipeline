@@ -93,8 +93,6 @@ class Neurocore:
         activity should be logged. If this parameter is not provided, no neuron activity will be logged.
 
         @return The updated neuron states array after performing the convolution operation.
-
-        NOTE: multiply incoming current with (1 - leak)?
         """
         #inCurrentLeak = (1-LEAK_RATE)
         kernels = self.recKernels if recSpike else self.kernels
@@ -111,8 +109,8 @@ class Neurocore:
     def forward(self, s: Spike, neurons, recSpike, neuronInLog = None, loggedNeuron = None)\
                 -> Tuple[ArrayLike, SpikeQueue, SpikeQueue]:
         """
-        This function performs forward propagation in a neural network by loading neurons, applying
-        leak, performing convolution, and generating spikes.
+        This function performs forward propagation in a neural network by loading neurons and
+        performing convolution.
 
         @param s A named tuple containing coordinates and timestamp of the spike to be processed.
         @param neurons A numpy array containing the state of each neuron in the layer.

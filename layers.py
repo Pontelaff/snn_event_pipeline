@@ -4,6 +4,7 @@ from numpy.typing import ArrayLike
 from utils import SpikeQueue, Spike
 from neurocore import Neurocore, EVENT_TIMESCLICE
 
+INPUT_LEAKS = True
 LEAK_RATE = 0.017
 REC_DELAY = 100
 U_RESET = 0
@@ -63,6 +64,11 @@ class ConvLayer:
             self.leaks = leak
         else:
             self.leaks = np.ones([numOutChannels, 1, 1]) * LEAK_RATE
+
+        # multiply input kernels with (1 - leak), if set
+        if INPUT_LEAKS:
+            layerKernels = layerKernels * (1 - self.leaks)
+            recKernels = recKernels * (1 - self.leaks)
 
         # load kernels into neurocores
         for nc in self.neurocores:
