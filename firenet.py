@@ -3,7 +3,7 @@ from layers import ConvLayer
 from timeit import timeit
 from dataloader import loadKernelsFromModel, loadThresholdsFromModel, loadLeakRatesFromModel, loadModel, loadEvents, loadEventsFromArr
 from utils import SpikeQueue, cropLogs
-from neurocore import LOG_BINSIZE
+from neurocore import EVENT_TIMESCLICE
 from visualization import compNeuronLogs, compNeuronInput, plotThresholdComp
 
 
@@ -40,7 +40,7 @@ def logNeuron(layerNames, layerNum, neuron, threshold = None, leak = None):
     inputKernels, hiddenKernels, recKernels, outKernels = loadKernelsFromModel(model)
     inputNeurons, hiddenNeurons, _ = initNeurons(len(hiddenKernels), len(inputKernels), len(hiddenKernels[0]), len(outKernels))
 
-    num_bins = spikeInput[-1].t//LOG_BINSIZE + 1
+    num_bins = spikeInput[-1].t//EVENT_TIMESCLICE + 1
     neuronLogOut = np.zeros([num_bins, len(inputKernels)])
     neuronLogStates = np.zeros([num_bins, len(inputKernels)])
     recQ = SpikeQueue()
@@ -62,15 +62,14 @@ def logNeuron(layerNames, layerNum, neuron, threshold = None, leak = None):
         neurons = hiddenNeurons[layerNum-1]
 
     convLayer = ConvLayer(len(kernels[0]), len(kernels), len(kernels[0, 0]), dtype)
-    convLayer.assignLayer(spikeInput, kernels, neurons, recQ, rKernels)
-    neuronStates, ffQ, recQ = convLayer.forward(neuronLogIn, neuronLogOut, neuronLogStates, neuron, threshold, leak)
+    convLayer.assignLayer(spikeInput, kernels, neurons, recQ, rKernels, threshold, leak)
+    neuronStates, ffQ, recQ = convLayer.forward(neuronLogIn, neuronLogOut, neuronLogStates, neuron)
     print("%d spikes in layer %s" %(len(ffQ), layerNames[layerNum]))
 
     np.save("test_sequences/" + layerNames[layerNum] + "_inLog.npy", neuronLogIn)
     np.save("test_sequences/" + layerNames[layerNum] + "_outLog.npy", np.stack([neuronLogStates, neuronLogOut], axis=-1))
 
     return neuronLogOut
-
 
 def testThresholds(layerNames, layerNum, neuron, thresholds):
     path = "test_sequences/" + layerNames[layerNum] + "_output_seq.npy"
@@ -128,8 +127,8 @@ def inference():
     return num_spikes
 
 layerNames =("head", "G1", "R1a", "R1b", "G2", "R2a", "R2b", "pred")
-loggedLayer = 0
-loggedNeuron = (1, 1, 1)
+loggedLayer = 1
+loggedNeuron = (18, 1, 1)
 runs=1
 #time = timeit(lambda: inference(), number=runs)
 # load thresholds
