@@ -11,8 +11,10 @@ FRAME_OFFSET = (240, 10)
 TIME_START = 80000
 TIME_STOP = 180000
 
-def loadModel(modelPath) -> LIFFireNet:
+def sigmoid(x):
+ return 1/(1 + np.exp(-x))
 
+def loadModel(modelPath) -> LIFFireNet:
     if os.path.isfile(modelPath):
         model = torch.load(modelPath, 'cpu')
         print("Model restored from " + modelPath + "\n")
@@ -27,6 +29,13 @@ def loadThresholdsFromModel(model) -> ArrayLike:
     thresholds = np.array([layers[l].thresh.detach().numpy() for l in range(len(layers))])
 
     return thresholds
+
+def loadLeakRatesFromModel(model) -> ArrayLike:
+    layers = (model.head, model.G1, model.R1a, model.R1b, model.G2, model.R2a, model.R2b)
+    leaks = np.array([layers[l].leak.detach().numpy() for l in range(len(layers))])
+    leaks = sigmoid(leaks)
+
+    return leaks
 
 def loadKernelsFromModel(model) -> Tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
     """

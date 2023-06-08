@@ -26,34 +26,12 @@ def areNeighbours(x_off, y_off, kernelSize) -> bool:
     neighbours = max(abs(x_off), abs(y_off)) <= kernelSize//2
     return neighbours
 
-def applyLeak(u, t_last, t_now) -> np.float16:
-    """
-    This function applies a leak to a neuron based on the time elapsed since the last
-    application of the leak.
-
-    @param u The membrane potential of the neuron that is being modified by the leak rate.
-    @param t_last The timestamp of the last update for this neuron.
-    @param t_now The timestamp of the incoming spike.
-
-    @return The leaked membrane potential.
-
-    NOTE: This might be optimised further
-    """
-    t_leak = t_now - t_last
-    # leak neuron if timestamps are different and potential is not zero
-    if t_leak*u != 0:
-        leak = LEAK_RATE / t_leak
-        u = u*leak
-
-    return u
-
 
 class Neurocore:
     # member attributes
     kernels = None      # 32*3*3 numpy array containing one channel each of 32 Kernels
     recKernels = None   # recurrent Kernels
-    spikeLeak = None    # spike for neuron Leak step
-    spikeConv = None    # spike for convolution step
+    spike = None    # spike for convolution step
 
     def __init__(self, channel, numKernels, kernelSize, dtype) -> None:
         """
@@ -67,8 +45,7 @@ class Neurocore:
         """
         self.channel = channel
         self.kernelSize = kernelSize
-        self.neuronStatesLeak = np.zeros([numKernels,kernelSize,kernelSize], dtype=dtype) # numpy array containing neighbours of spiking neuron
-        self.neuronStatesConv = self.neuronStatesLeak.copy()
+        self.neuronStates = np.zeros([numKernels,kernelSize,kernelSize], dtype=dtype) # numpy array containing neighbours of spiking neuron
 
     def assignLayer(self, kernels, recKernels = None):
         """
@@ -101,23 +78,22 @@ class Neurocore:
         # for each channel of current layer
         # load neuron states neighbouring spike coordinates
         # start pos-1 stop pos+2 and increment by 1 to account for padding
-        self.neuronStatesLeak = neurons[:, s.x:s.x+3, s.y:s.y+3]
-        self.spikeLeak = s
+        self.neuronStates = neurons[:, s.x:s.x+3, s.y:s.y+3]
+        self.spike = s
 
-    def leakNeurons(self):
+    def leakNeurons(self, neurons, leak):
         """
         This function applies a leak to the neuron states and forwards the spike object to the next
         pipline step performing the convolution.
         """
-        leakFunc = np.vectorize(applyLeak)
-        u = self.neuronStatesLeak['u']
-        t = self.neuronStatesLeak['t']
-        self.neuronStatesLeak['u'] = leakFunc(u, t, self.spikeLeak.t)
-        # forward spike and neurons to convolution step
-        self.spikeConv = self.spikeLeak
-        self.neuronStatesConv = self.neuronStatesLeak.copy()
+        if leak is None:
+            leak = LEAK_RATE
 
-    def applyConv(self, recSpike, recLayer,  neuronInLog = None, neuronOutLog = None, ln = None, thresh = None) -> ArrayLike:
+        neurons = neurons*leak
+
+        return neurons
+
+    def applyConv(self, recSpike, neuronInLog = None, ln = None) -> ArrayLike:
         """
         This function performs the convolution operations for neurons neighbouring the current spike
         and one channel (specified by the neurocore) of each kernel. Each kernel will then apply the
@@ -126,17 +102,12 @@ class Neurocore:
         @param recSpike A boolean parameter that indicates whether the convolution operation is being
         performed for a recurrent spike or not. If it is True, then the recurrent kernels will
         be used instead of the regular kernels.
-        @param recLayer A boolean parameter that indicates whether the current layer is recurrent or
-        not. If it is true, all output spikes will also be added to the recurrent spike queue with an
-        added delay.
         @param neuronInLog A numpy array used to log all weighted input spikes seperated by channel
         and time bins for the observed neuron.
         @param neuronOutLog A numpy array used to log all output spikes seperated by time bins for the
         observed neuron.
         @param ln The `ln` parameter is an optional argument that specifies a single neuron whose
         activity should be logged. If this parameter is not provided, no neuron activity will be logged.
-        @param thresh The threshold to use during threshold check. If 'None' the default threshold constant
-        will be used.
 
         @return The updated neuron states array after performing the convolution operation.
 
@@ -144,44 +115,18 @@ class Neurocore:
         """
         #inCurrentLeak = (1-LEAK_RATE)
         kernels = self.recKernels if recSpike else self.kernels
-        #updateIndices = np.where((self.neuronStatesConv['u'] != U_RESET) | (self.neuronStatesConv['t'] < self.spikeConv.t - REFRACTORY_PERIOD))
-        #self.neuronStatesConv['u'][updateIndices] += kernels[updateIndices]#*inCurrentLeak
-        #self.neuronStatesConv['t'][updateIndices] = self.spikeConv.t
+        self.neuronStates += kernels
 
-        # updateKernel = np.where(((self.neuronStatesConv['u'] != U_RESET) | (self.neuronStatesConv['t'] < self.spikeConv.t - REFRACTORY_PERIOD)), kernels, 0)
-        # updatedTime = np.where((self.neuronStatesConv['u'] != U_RESET) | (self.neuronStatesConv['t'] < self.spikeConv.t - REFRACTORY_PERIOD), self.spikeConv.t, self.neuronStatesConv['t'])
-        # self.neuronStatesConv['u'] += updateKernel#*inCurrentLeak
-        # self.neuronStatesConv['t'] = updatedTime
-
-        timeMask = self.neuronStatesConv['t'] < (self.spikeConv.t.item() - REFRACTORY_PERIOD)
-        resetMask = self.neuronStatesConv['u'] != U_RESET
-        updateMask = np.logical_or(timeMask, resetMask)
-        potentialUpdates = kernels * updateMask
-        timeUpdates = self.spikeConv.t * updateMask + self.neuronStatesConv['t']* np.logical_not(updateMask)
-        self.neuronStatesConv['u'] += potentialUpdates
-        self.neuronStatesConv['t'] = timeUpdates
-
-
-        # log neuron activities
-        if thresh is None:
-            thresh = U_THRESH
+        # Log weighted neuron input
         if ln is not None:
-            x_offset =  ln[1] -self.spikeConv.x
-            y_offset = ln[2] - self.spikeConv.y
+            x_offset =  ln[1] -self.spike.x
+            y_offset = ln[2] - self.spike.y
             if areNeighbours(x_offset, y_offset, self.kernelSize):
-                bin = self.spikeConv.t//LOG_BINSIZE
-                neuronInLog[bin, self.spikeConv.c + int(recSpike) * 32] += kernels[ln[0], x_offset + 1, y_offset+1]
-                for c in range(len(self.neuronStatesConv)):
-                    if neuronOutLog[bin][c][1] == 0:
-                        neuronOutLog[bin][c][0] = self.neuronStatesConv[c, x_offset + 1, y_offset+1]['u']
-                    if (self.neuronStatesConv[c, x_offset + 1, y_offset+1]['u'] >= thresh[c]):
-                        neuronOutLog[bin][c][1] += 1
+                bin = self.spike.t//LOG_BINSIZE
+                neuronInLog[bin, self.spike.c + int(recSpike) * 32] += kernels[ln[0], x_offset + 1, y_offset+1]
 
-        events, recEvents = self.checkThreshold(thresh, recLayer)
 
-        return events, recEvents
-
-    def checkThreshold(self, threshold, recurrent = False) -> Tuple[ArrayLike, SpikeQueue, SpikeQueue]:
+    def checkThreshold(self, neurons, threshold, timestamp, recurrent = False, neuronOutLog = None, neuronStateLog = None, ln = None) -> Tuple[ArrayLike, SpikeQueue, SpikeQueue]:
         """
         This function checks if the neuron states exceed a threshold potential, resets them if they do,
         and adds a spike event to a queue.
@@ -193,32 +138,44 @@ class Neurocore:
 
         TODO: reset negative states?
         """
-        # Get indices of all neurons that exceed the threshold
-        exceed_indices = np.where(self.neuronStatesConv['u'] >= threshold)
-        # Reset potential of all exceeded neurons
-        #self.neuronStatesConv[exceed_indices]['u'] = U_RESET
 
-        u = np.array(self.neuronStatesConv['u'])
+        if threshold is None:
+            threshold = U_THRESH
+
+        # log neuron output spies
+        if ln is not None:
+            bin = timestamp//LOG_BINSIZE
+            logNeuronStates = neurons[:,ln[1],ln[2]]
+            thresh = np.reshape(threshold, np.shape(logNeuronStates))
+            neuronStateLog[bin] = logNeuronStates
+            neuronOutLog[bin] = np.where(logNeuronStates > thresh, 1, 0)
+
+        # Get indices of all neurons that exceed the threshold
+        exceed_indices = np.where(neurons >= threshold)
+        # Reset potential of all exceeded neurons
+        #self.neuronStates[exceed_indices]['u'] = U_RESET
+
+        u = np.array(neurons)
         u[u >= threshold] = U_RESET # hard reset
         #np.subtract(u, threshold, out=u, where=u>=threshold)
-        self.neuronStatesConv['u'] = u
+        neurons = u
 
-        # resetMask = self.neuronStatesConv['u'] >= threshold
+        # resetMask = neurons >= threshold
         # if len(resetMask[0] > 0):
         #     print("bp")
         # # Reset potential of all exceeded neurons
-        # self.neuronStatesConv['u'] = self.neuronStatesConv['u'] * np.logical_not(resetMask)
+        # neurons = neurons * np.logical_not(resetMask)
 
         # Extract the timestamps of exceeded neurons and create corresponding events
-        events = [Spike(x, y, c, self.neuronStatesConv[c, x, y]['t'].item()) for c, x, y in zip(*exceed_indices)]
+        events = [Spike(x, y, c, timestamp) for c, x, y in zip(*exceed_indices)]
         if recurrent and (len(events) > 0):
-            recEvents = [Spike(x, y, c, self.neuronStatesConv[c, x, y]['t'].item() + REC_DELAY) for c, x, y in zip(*exceed_indices)]
+            recEvents = [Spike(x, y, c, timestamp + REC_DELAY) for c, x, y in zip(*exceed_indices)]
         else:
             recEvents = SpikeQueue()
 
-        return events, recEvents
+        return neurons, events, recEvents
 
-    def forward(self, s: Spike, neurons, recSpike, recLayer, neuronInLog = None, neuronOutLog = None, loggedNeuron = None, threshold = None)\
+    def forward(self, s: Spike, neurons, recSpike, recLayer, neuronInLog = None, loggedNeuron = None, threshold = None)\
                 -> Tuple[ArrayLike, SpikeQueue, SpikeQueue]:
         """
         This function performs forward propagation in a neural network by loading neurons, applying
@@ -247,10 +204,8 @@ class Neurocore:
         # load neurons into neurocore
         self.loadNeurons(s, neurons)
 
-        # apply leak
-        self.leakNeurons()
-
         # perform convolution and generate spikes
-        events, recEvents = self.applyConv(recSpike, recLayer, neuronInLog, neuronOutLog, loggedNeuron, threshold)
+        self.applyConv(recSpike, neuronInLog, loggedNeuron)
 
-        return self.neuronStatesConv, events, recEvents
+
+        return self.neuronStates

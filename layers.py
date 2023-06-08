@@ -12,6 +12,7 @@ class ConvLayer:
     outQueue = SpikeQueue()
     recQueue = SpikeQueue()
     inQueue = SpikeQueue()
+    timestamp = 0
 
     def __init__(self, inChannels, numKernels, kernelSize, dtype) -> None:
         """
@@ -66,7 +67,7 @@ class ConvLayer:
 
         self.neurons[:, x-l:x+r+1, y-u:y+d+1] = updatedNeurons[:, 1-l:2+r, 1-u:2+d]
 
-    def forward(self, neuronInLog = None, neuronOutLog = None, loggedNeuron = None, threshold = None) -> Tuple[List, SpikeQueue, SpikeQueue]:
+    def forward(self, neuronInLog = None, neuronOutLog = None, neuronStateLog = None, loggedNeuron = None, threshold = None, leak = None) -> Tuple[List, SpikeQueue, SpikeQueue]:
         """
         This function processes events from an input queue, updates neurons, and generates new events
         for an output queue.
@@ -101,10 +102,16 @@ class ConvLayer:
             # updatedNeurons = self.neurocores[c].applyConv(neuronInLog, neuronOutLog, isRecurrent)
             # updatedNeurons = self.generateSpikes(updatedNeurons, c)
 
-            updatedNeurons, newEvents, recEvents = self.neurocores[c].forward(s, self.neurons, spikeIsRec, self.recurrent, neuronInLog, neuronOutLog, loggedNeuron, threshold)
+            if (s.t > self.timestamp):
+                # apply leak
+                self.neurons, ffEvents, recEvents = self.neurocores[c].checkThreshold(self.neurons, threshold, self.timestamp, self.recurrent, neuronOutLog, neuronStateLog, loggedNeuron)
+                self.neurons = self.neurocores[c].leakNeurons(self.neurons, leak)
+                self.outQueue.extend(ffEvents)
+                #self.recQueue.extend(recEvents)
+                self.timestamp = s.t
 
+            updatedNeurons = self.neurocores[c].forward(s, self.neurons, spikeIsRec, self.recurrent, neuronInLog, loggedNeuron, threshold)
             self.updateNeurons(s.x, s.y, updatedNeurons)
-            self.outQueue.extend(newEvents)
-            #self.recQueue.extend(recEvents)
+
 
         return self.neurons, self.outQueue, self.recQueue
