@@ -3,7 +3,7 @@ from utils import Spike, SpikeQueue
 from typing import Tuple
 from numpy.typing import ArrayLike
 
-EVENT_TIMESCLICE = 1000
+EVENT_TIMESLICE = 1000
 REFRACTORY_PERIOD = 50
 
 def areNeighbours(x_off, y_off, kernelSize) -> bool:
@@ -94,7 +94,6 @@ class Neurocore:
 
         @return The updated neuron states array after performing the convolution operation.
         """
-        #inCurrentLeak = (1-LEAK_RATE)
         kernels = self.recKernels if recSpike else self.kernels
         self.neuronStates += kernels
 
@@ -103,7 +102,7 @@ class Neurocore:
             x_offset =  ln[1] -self.spike.x
             y_offset = ln[2] - self.spike.y
             if areNeighbours(x_offset, y_offset, self.kernelSize):
-                bin = self.spike.t//EVENT_TIMESCLICE
+                bin = self.spike.t//EVENT_TIMESLICE
                 neuronInLog[bin, self.spike.c + int(recSpike) * 32] += kernels[ln[0], x_offset + 1, y_offset+1]
 
     def forward(self, s: Spike, neurons, recSpike, neuronInLog = None, loggedNeuron = None)\

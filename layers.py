@@ -2,7 +2,7 @@ import numpy as np
 from typing import List, Tuple
 from numpy.typing import ArrayLike
 from utils import SpikeQueue, Spike
-from neurocore import Neurocore, EVENT_TIMESCLICE
+from neurocore import Neurocore, EVENT_TIMESLICE
 
 INPUT_LEAKS = True
 LEAK_RATE = 0.017
@@ -17,10 +17,10 @@ class ConvLayer:
     neurons = None
     thresholds = None
     leaks = None
+    timestamp = None
     outQueue = SpikeQueue()
     recQueue = SpikeQueue()
     inQueue = SpikeQueue()
-    timestamp = 0
 
     def __init__(self, inChannels, numKernels, kernelSize, dtype) -> None:
         """
@@ -56,6 +56,7 @@ class ConvLayer:
         self.outQueue = SpikeQueue()
         self.neurons = neurons
         self.recurrent = recKernels is not None
+        self.timestamp = (inQueue[0].t//EVENT_TIMESLICE)*EVENT_TIMESLICE
 
         # use default threshold and leak rate if none are given
         if threshold is not None:
@@ -104,7 +105,7 @@ class ConvLayer:
 
         # log neuron output spikes
         if ln is not None:
-            bin = self.timestamp//EVENT_TIMESCLICE
+            bin = self.timestamp//EVENT_TIMESLICE
             logNeuronStates = self.neurons[:,ln[1],ln[2]]
             thresh = np.reshape(self.thresholds, np.shape(logNeuronStates))
             neuronStateLog[bin] = logNeuronStates
@@ -177,11 +178,11 @@ class ConvLayer:
             else:
                 s = self.inQueue.pop(0)
 
-            if (s.t >= self.timestamp + EVENT_TIMESCLICE):
+            if (s.t >= self.timestamp + EVENT_TIMESLICE):
                 # next time slice reached, generate spikes and leak neurons
                 self.checkThreshold(neuronOutLog, neuronStateLog, loggedNeuron)
                 self.leakNeurons()
-                self.timestamp = (s.t//EVENT_TIMESCLICE)*EVENT_TIMESCLICE
+                self.timestamp = (s.t//EVENT_TIMESLICE)*EVENT_TIMESLICE
 
             updatedNeurons = self.neurocores[s.c].forward(s, self.neurons, spikeIsRec, neuronInLog, loggedNeuron)
             self.updateNeurons(s.x, s.y, updatedNeurons)

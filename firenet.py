@@ -3,7 +3,7 @@ from layers import ConvLayer
 from timeit import timeit
 from dataloader import loadKernelsFromModel, loadThresholdsFromModel, loadLeakRatesFromModel, loadModel, loadEvents, loadEventsFromArr
 from utils import SpikeQueue, cropLogs
-from neurocore import EVENT_TIMESCLICE
+from neurocore import EVENT_TIMESLICE
 from visualization import compNeuronLogs, compNeuronInput, plotThresholdComp
 
 
@@ -41,7 +41,7 @@ def logNeuron(layerNum, neuron, threshold = None, leak = None):
     inputKernels, hiddenKernels, recKernels, outKernels = loadKernelsFromModel(model)
     inputNeurons, hiddenNeurons, _ = initNeurons(len(hiddenKernels), len(inputKernels), len(hiddenKernels[0]), len(outKernels))
 
-    num_bins = spikeInput[-1].t//EVENT_TIMESCLICE + 1
+    num_bins = spikeInput[-1].t//EVENT_TIMESLICE + 1
     neuronLogOut = np.zeros([num_bins, len(inputKernels)])
     neuronLogStates = np.zeros([num_bins, len(inputKernels)])
     recQ = SpikeQueue()
