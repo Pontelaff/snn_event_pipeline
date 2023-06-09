@@ -88,7 +88,7 @@ def testThresholds(layerNum, neuron, thresholds):
 
     return jaccard, hamming
 
-def inference():
+def inference(logLayer, logNeuron):
     # initialise kernel weights and neuron states
     inputKernels, hiddenKernels, recKernels, outKernels = loadKernelsFromModel(model)
     inputNeurons, hiddenNeurons, _ = initNeurons(len(hiddenKernels), len(inputKernels), len(hiddenKernels[0]), len(outKernels))
@@ -101,11 +101,14 @@ def inference():
     # load thresholds and leaks from model
     thresholds = loadThresholdsFromModel(model)
     leaks = loadLeakRatesFromModel(model)
+    neuronLogIn = None
+    neuronLogOut = None
+    neuronLogStates = None
 
     # run input layer
     inputLayer.assignLayer(eventInput, inputKernels, inputNeurons, threshold=thresholds[0], leak=leaks[0])
     inputNeurons, ffQ, _ = inputLayer.forward()
-    print("%d spikes in input layer" %(len(ffQ)))
+    print("%d spikes in layer head" %(len(ffQ)))
     num_spikes = len(ffQ)
 
     recQueues = [SpikeQueue() for _ in range(len(REC_LAYERS))]
@@ -118,27 +121,39 @@ def inference():
         except ValueError as ve:
             rec = False
 
+        if l == logLayer-1:
+            num_bins = ffQ[-1].t//EVENT_TIMESLICE +1
+            neuronLogOut = np.zeros([num_bins, len(hiddenKernels[l])])
+            neuronLogStates = np.zeros([num_bins, len(hiddenKernels[l])])
+            neuronLogIn = np.zeros([num_bins, len(hiddenKernels[l, 0])])
+            ln = logNeuron
+        else:
+            ln = None
+
         if rec:
             convLayer.assignLayer(ffQ, hiddenKernels[l], hiddenNeurons[l], recQueues[recInd], recKernels[recInd], thresholds[l], leaks[l])
             hiddenNeurons[l], ffQ, recQueues[recInd]= convLayer.forward()
         else:
             convLayer.assignLayer(ffQ, hiddenKernels[l], hiddenNeurons[l], threshold=thresholds[l], leak=leaks[l])
-            hiddenNeurons[l], ffQ, _ = convLayer.forward()
+            hiddenNeurons[l], ffQ, _ = convLayer.forward(neuronLogIn, neuronLogOut, neuronLogStates, ln)
 
         print("%d spikes in layer %s" %(len(ffQ), layerNames[l+1]))
         num_spikes += len(ffQ)
+
+    np.save("test_sequences/" + layerNames[loggedLayer] + "_inLog.npy", neuronLogIn)
+    np.save("test_sequences/" + layerNames[loggedLayer] + "_outLog.npy", np.stack([neuronLogStates, neuronLogOut], axis=-1))
 
     return num_spikes
 
 loggedLayer = 2
 loggedNeuron = (18, 1, 1)
 runs=1
-#time = timeit(lambda: inference(), number=runs)
+time = timeit(lambda: inference(loggedLayer, loggedNeuron), number=runs)
 # load thresholds
-thresholds = loadThresholdsFromModel(model)
-leaks = loadLeakRatesFromModel(model)
-time = timeit(lambda: logNeuron(layerNames, loggedLayer, loggedNeuron, thresholds[loggedLayer], leaks[loggedLayer]), number=runs)
-print(f"Time: {time/runs:.6f}")
+# thresholds = loadThresholdsFromModel(model)
+# leaks = loadLeakRatesFromModel(model)
+# time = timeit(lambda: logNeuron(layerNames, loggedLayer, loggedNeuron, thresholds[loggedLayer], leaks[loggedLayer]), number=runs)
+#print(f"Time: {time/runs:.6f}")
 
 compNeuronInput(layerNames[loggedLayer])
 compNeuronLogs(layerNames[loggedLayer], loggedNeuron[0])
