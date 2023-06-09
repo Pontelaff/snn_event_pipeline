@@ -15,6 +15,8 @@ U_THRESH = 1.0
 class ConvLayer:
     recurrent = False
     neurons = None
+    thresholds = None
+    leaks = None
     outQueue = SpikeQueue()
     recQueue = SpikeQueue()
     inQueue = SpikeQueue()
@@ -65,10 +67,13 @@ class ConvLayer:
         else:
             self.leaks = np.ones([numOutChannels, 1, 1]) * LEAK_RATE
 
-        # multiply input kernels with (1 - leak), if set
+        # multiply input kernels with (1 - leak), if INPUT_LEAKS is set
+        # the original implementation multiplied all incoming currents with (1 - leak)
+        # modifying the kernels once achieves the same result
         if INPUT_LEAKS:
-            layerKernels = layerKernels * (1 - self.leaks)
-            recKernels = recKernels * (1 - self.leaks)
+            layerKernels = layerKernels * (1 - self.leaks.reshape(numOutChannels,1,1,1))
+            if self.recurrent:
+                recKernels = recKernels * (1 - self.leaks.reshape(numOutChannels,1,1,1))
 
         # load kernels into neurocores
         for nc in self.neurocores:
