@@ -102,7 +102,7 @@ class ConvLayer:
         TODO: reset negative states?
         """
 
-        # log neuron output spies
+        # log neuron output spikes
         if ln is not None:
             bin = self.timestamp//EVENT_TIMESCLICE
             logNeuronStates = self.neurons[:,ln[1],ln[2]]
@@ -177,16 +177,11 @@ class ConvLayer:
             else:
                 s = self.inQueue.pop(0)
 
-            # self.neurocores[c].loadNeurons(s, self.neurons)
-            # self.neurocores[c].leakNeurons()
-            # updatedNeurons = self.neurocores[c].applyConv(neuronInLog, neuronOutLog, isRecurrent)
-            # updatedNeurons = self.generateSpikes(updatedNeurons, c)
-
             if (s.t >= self.timestamp + EVENT_TIMESCLICE):
                 # next time slice reached, generate spikes and leak neurons
                 self.checkThreshold(neuronOutLog, neuronStateLog, loggedNeuron)
                 self.leakNeurons()
-                self.timestamp += EVENT_TIMESCLICE
+                self.timestamp = (s.t//EVENT_TIMESCLICE)*EVENT_TIMESCLICE
 
             updatedNeurons = self.neurocores[s.c].forward(s, self.neurons, spikeIsRec, neuronInLog, loggedNeuron)
             self.updateNeurons(s.x, s.y, updatedNeurons)
