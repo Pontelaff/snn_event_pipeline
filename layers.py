@@ -127,7 +127,7 @@ class ConvLayer:
 
         # Add events to queue
         self.outQueue.extend(ffEvents)
-        #self.recQueue.extend(recEvents)
+        self.recQueue.extend(recEvents)
 
     def updateNeurons(self, x, y, updatedNeurons):
         """

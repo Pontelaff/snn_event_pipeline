@@ -11,8 +11,8 @@ MODEL_PATH = "pretrained/LIFFireNet.pth"
 INPUT_PATH = "datasets/cup-drop-short.h5"
 NUM_INPUT = 2000000
 
-SEG_WIDTH = 3
-SEG_HEIGHT = 3
+SEG_WIDTH = 16
+SEG_HEIGHT = 16
 REC_LAYERS = (1,4)
 
 
@@ -20,6 +20,7 @@ REC_LAYERS = (1,4)
 dtype = np.float16
 
 model = loadModel(MODEL_PATH)
+layerNames =("head", "G1", "R1a", "R1b", "G2", "R2a", "R2b", "pred")
 
 def initNeurons(numHiddenLayers, numInKernels, numHiddenKernels, numOutKernels):
     # initialise neuron states
@@ -29,7 +30,7 @@ def initNeurons(numHiddenLayers, numInKernels, numHiddenKernels, numOutKernels):
 
     return inputNeurons, hiddenNeurons, outputNeurons
 
-def logNeuron(layerNames, layerNum, neuron, threshold = None, leak = None):
+def logNeuron(layerNum, neuron, threshold = None, leak = None):
 
     # load input events from file
     inPath = "test_sequences/" + layerNames[layerNum] + "_input_seq.npy"
@@ -71,7 +72,7 @@ def logNeuron(layerNames, layerNum, neuron, threshold = None, leak = None):
 
     return neuronLogOut
 
-def testThresholds(layerNames, layerNum, neuron, thresholds):
+def testThresholds(layerNum, neuron, thresholds):
     path = "test_sequences/" + layerNames[layerNum] + "_output_seq.npy"
     pytorchOut =  np.load(path)[:,:,1,1]
     jaccard = np.zeros(len(thresholds)) # Jaccard distance
@@ -97,9 +98,12 @@ def inference():
 
     # load input events from file
     eventInput = loadEvents(INPUT_PATH, SEG_WIDTH, SEG_HEIGHT, NUM_INPUT)
+    # load thresholds and leaks from model
+    thresholds = loadThresholdsFromModel(model)
+    leaks = loadLeakRatesFromModel(model)
 
     # run input layer
-    inputLayer.assignLayer(eventInput, inputKernels, inputNeurons)
+    inputLayer.assignLayer(eventInput, inputKernels, inputNeurons, threshold=thresholds[0], leak=leaks[0])
     inputNeurons, ffQ, _ = inputLayer.forward()
     print("%d spikes in input layer" %(len(ffQ)))
     num_spikes = len(ffQ)
@@ -107,27 +111,26 @@ def inference():
     recQueues = [SpikeQueue() for _ in range(len(REC_LAYERS))]
 
     # run hidden layers
-    for l in range(len(hiddenKernels[0])):
+    for l in range(len(hiddenKernels)):
         try:
-            recInd = REC_LAYERS.index(l)
+            recInd = REC_LAYERS.index(l+1)
             rec = True
         except ValueError as ve:
             rec = False
 
         if rec:
-            convLayer.assignLayer(ffQ, hiddenKernels[l], hiddenNeurons[l], recQueues[recInd], recKernels[recInd])
+            convLayer.assignLayer(ffQ, hiddenKernels[l], hiddenNeurons[l], recQueues[recInd], recKernels[recInd], thresholds[l], leaks[l])
             hiddenNeurons[l], ffQ, recQueues[recInd]= convLayer.forward()
         else:
-            convLayer.assignLayer(ffQ, hiddenKernels[l], hiddenNeurons[l])
+            convLayer.assignLayer(ffQ, hiddenKernels[l], hiddenNeurons[l], threshold=thresholds[l], leak=leaks[l])
             hiddenNeurons[l], ffQ, _ = convLayer.forward()
 
-        print("%d spikes in layer %d" %(len(ffQ), l+1))
+        print("%d spikes in layer %s" %(len(ffQ), layerNames[l+1]))
         num_spikes += len(ffQ)
 
     return num_spikes
 
-layerNames =("head", "G1", "R1a", "R1b", "G2", "R2a", "R2b", "pred")
-loggedLayer = 1
+loggedLayer = 2
 loggedNeuron = (18, 1, 1)
 runs=1
 #time = timeit(lambda: inference(), number=runs)
