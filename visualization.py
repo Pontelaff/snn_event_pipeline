@@ -121,7 +121,7 @@ def compNeuronLogs(layerName, channel):
     fig, (ax1, ax3, ax2) = plt.subplots(3, 1, figsize=(8, 6))
 
     # Plot the pytorch input heatmap
-    im = ax1.imshow(np.transpose(pytorchInSum), cmap='viridis', aspect='auto')
+    im = ax1.imshow(np.transpose(ownIn), cmap='viridis', aspect='auto')
     # Set the x and y-axis labels
     #ax3.set_xlabel('Time Bins')
     ax1.set_ylabel('Input Spikes\nper Channel')
