@@ -140,7 +140,7 @@ def loadEvents(filePath, frameWidth, frameHeight, numEvents = -1) -> SpikeQueue:
         t_offset = ev[0,3]
         ev[:,3] -= t_offset
 
-        spikeQueue = [Spike(ev[i][0]-FRAME_OFFSET[0], ev[i][1]-FRAME_OFFSET[1], int(ev[i][2]), ev[i][3]) for i in range(len(ev))]
+        spikeQueue = [Spike(ev[i][0]-FRAME_OFFSET[0], ev[i][1]-FRAME_OFFSET[1], int(ev[i][2]), int(ev[i][3])) for i in range(len(ev))]
         print(f"{len(spikeQueue)} input events read from {filePath}\n")
     else:
         print("File not found at " + filePath + "\n")
