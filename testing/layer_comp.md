@@ -20,63 +20,48 @@ x_pos = 7
 y_pos = 2
 ```
 
-### Learned Thresholds
-
 |         | Channel 1 | Layer |
 |---------|-----------|-------|
-| Hamming |0.003788|0.009706|
-| Jaccard |0.023256|0.146429|
+| Hamming |0.003788|0.000829|
+| Jaccard |0.023256|0.014199|
 
-![Head Layer Activity](head_out_1_1_1.png)
 
-### Threshold 0.68
-
-|         | Channel 1 | Layer |
-|---------|-----------|-------|
-| Hamming |0.037879|0.019650|
-| Jaccard |0.227273|0.270799|
-
-[Head Layer Activity](head_out_1_t0-68.png)
+![Head Layer Activity](head_out_1.png)
 
 [Threshold Test head](thresh_head.png)
 
 ## G1 Layer
 
 ```python
-channel = 18
+channel = 16
 x_pos = 7
 y_pos = 2
 ```
 
-### Learned Threshold
+### Extracted Recurrent Spikes
 
-|         | Channel 18 | Layer |
+|         | Channel 16 | Layer |
 |---------|-----------|-------|
-| Hamming |0.227273|0.123816|
-| Jaccard |0.320856|0.265550|
+| Hamming |0.003788|0.001776|
+| Jaccard |0.006173|0.005155|
 
 
-![G1 Layer Activity](G1_out_18_1_1.png)
+![G1 Layer Activity](G1_out_16.png)
 
-### Threshold 1.00
+### Generated Recurrent Spikes
 
-|         | Channel 18 | Layer |
+32x32 Cropped h5 file
+
+x = [240:272]
+y = [10:42]
+N = [16,16]
+
+|         | Channel 16 | Layer |
 |---------|-----------|-------|
-| Hamming |0.166667|0.086884|
-| Jaccard |0.258824|0.205891|
+| Hamming |0.073171|0.079649|
+| Jaccard |0.090909|0.191217|
 
-[G1 Layer Activity](G1_out_18_t1-20.png)
-
-### Threshold 1.20
-
-|         | Channel 18 | Layer |
-|---------|-----------|-------|
-| Hamming |0.098485|0.066880|
-| Jaccard |0.172185|0.172414|
-
-[G1 Layer Activity](G1_out_18_t1-00.png)
-
-[Threshold Test G1](thresh_G1.png)
+![G1 Layer Activity](G1_out32crop.png)
 
 ## R1a Layer
 
@@ -87,25 +72,12 @@ x_pos = 1
 y_pos = 3
 ```
 
-### Learned Thresholds
-
 |         | Channel 12 | Layer |
 |---------|-----------|-------|
-| Hamming | 0.165414 | 0.116776 |
-| Jaccard | 0.628571 | 0.370896 |
+| Hamming | 0.000000 | 0.000470 |
+| Jaccard | 0.000000 | 0.002358 |
 
-![R1a Layer Activity](R1a_out_12_1_1.png)
-
-### Threshold 1.00
-
-|         | Channel 12 | Layer |
-|---------|-----------|-------|
-| Hamming | 0.060150 | 0.075188 |
-| Jaccard | 0.390244 | 0.293713 |
-
-![R1a Layer Activity](R1a_out_12_t1-00.png)
-
-[Threshold Test R1a](thresh_R1a.png)
+![R1a Layer Activity](R1a_out_12.png)
 
 ## R1b Layer
 
@@ -119,22 +91,10 @@ y_pos = 3
 
 |         | Channel 10 | Layer |
 |---------|-----------|-------|
-| Hamming | 0.015038 | 0.121711 |
-| Jaccard | 0.142857 | 0.423203 |
+| Hamming | 0.000000 | 0.000822 |
+| Jaccard | 0.000000 | 0.004871 |
 
-![R1b Layer Activity](R1b_out_10_1_1.png)
-
-### Threshold 1.00
-
-|         | Channel 10 | Layer |
-|---------|-----------|-------|
-| Hamming | 0.015038 | 0.079065 |
-| Jaccard | 0.153846 | 0.345305 |
-
-[R1b Layer Activity](R1b_out_10_t1-00.png)
-
-[Threshold Test R1b](thresh_R1b.png)
-
+![R1b Layer Activity](R1b_out_10.png)
 
 ## G2 Layer
 
@@ -153,15 +113,6 @@ y_pos = 2
 
 ![G2 Layer Activity](G2_out_16.png)
 
-### Threshold 1.00
-
-|         | Channel 16 | Layer |
-|---------|-----------|-------|
-| Hamming | 0.124060 | 0.104793 |
-| Jaccard | 0.275000 | 0.304229 |
-
-[G2 Layer Activity](G2_out_16_t1-00.png)
-
 ### Threshold 1.20
 
 |         | Channel 16 | Layer |
@@ -170,12 +121,12 @@ y_pos = 2
 | Jaccard | 0.196262 | 0.266389 |
 
 
-![G2 Layer Activity](G2_out_16_t1-20.png)
+[G2 Layer Activity](G2_out_16_t1-20.png)
 
 ## Discussion
 
-- Spiking activity in convolutional layers is roughly matching the pytorch implementation
-- Spiking activity in recurrent convolutional layers is barely matching
+- Spiking activity in convolutional layers is matching the pytorch implementation
+- Spiking activity in recurrent convolutional layers is matching with extracted recurrent spikes
 - Learned thresholds are only beneficial for head Layer
 - Rec layers are missing inputs from outside their kernel window
   - Spikes outside of the kernel widndows might lead to recurrent spikes inside the kernel window
