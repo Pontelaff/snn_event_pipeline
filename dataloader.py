@@ -109,20 +109,21 @@ def loadEventsFromArr(arrPath, recurrent = False) -> SpikeQueue:
 
     return spikeQueue
 
-def loadEvents(filePath, frameWidth, frameHeight, numEvents = -1) -> SpikeQueue:
+def loadEvents(filePath, frameWidth, frameHeight, maxEvents = -1) -> SpikeQueue:
     """
     This function loads events from a specified file path, filters them based on certain criteria,
     subtracts an offset to start at t=0, and returns a list of Spike objects.
 
     @param filePath The file path of the input file containing events data.
-    @param numEvents The number of events to load from the file. If set to -1, it will load all events
+    @param maxEvents The number of events to load from the file. If set to -1, it will load all events
     in the file.
     @return A Spike Queue as a list of Spike tuples
     """
     if os.path.isfile(filePath):
         file = h5py.File(filePath, 'r')
-        if numEvents == -1:
-            numEvents = file.attrs["num_events"]
+        numEvents = file.attrs["num_events"]
+        if maxEvents == -1:
+            maxEvents = numEvents
         events = np.zeros((numEvents, 4), dtype=np.int32)
         events[:,0] = file["events/xs"][:numEvents]
         events[:,1] = file["events/ys"][:numEvents]
@@ -134,7 +135,7 @@ def loadEvents(filePath, frameWidth, frameHeight, numEvents = -1) -> SpikeQueue:
         mask = (events[:, 0] >= FRAME_OFFSET[0]) & (events[:, 0] <= FRAME_OFFSET[0] + frameWidth-1) &\
             (events[:, 1] >= FRAME_OFFSET[1]) & (events[:, 1] <= FRAME_OFFSET[1] + frameHeight-1) &\
             (events[:, 3] >= TIME_START) & (events[:,3] <= TIME_STOP)
-        ev = events[mask]
+        ev = events[mask][:maxEvents]
 
         # subtract offset to start at t = 0
         t_offset = ev[0,3]
