@@ -1,10 +1,10 @@
 import numpy as np
 import time
-from layers import ConvLayer
+from neurocore import Neurocore
 from timeit import timeit
 from dataloader import loadKernelsFromModel, loadThresholdsFromModel, loadLeakRatesFromModel, loadModel, loadEvents, loadEventsFromArr
 from utils import SpikeQueue, cropLogs
-from neurocore import EVENT_TIMESLICE
+from pipeline import EVENT_TIMESLICE
 from visualization import compNeuronLogs, compNeuronInput, plotThresholdComp
 
 
@@ -63,7 +63,7 @@ def logNeuron(layerNum, neuron, threshold = None, leak = None):
         kernels = hiddenKernels[layerNum-1]
         neurons = hiddenNeurons[layerNum-1]
 
-    convLayer = ConvLayer(len(kernels[0]), len(kernels), len(kernels[0, 0]), dtype)
+    convLayer = Neurocore(len(kernels[0]), len(kernels), len(kernels[0, 0]), dtype)
     convLayer.assignLayer(spikeInput, kernels, neurons, recQ, rKernels, threshold, leak)
     neuronStates, ffQ, recQ = convLayer.forward(neuronLogIn, neuronLogOut, neuronLogStates, neuron)
     print("%d spikes in layer %s" %(len(ffQ), layerNames[layerNum]))
@@ -117,8 +117,8 @@ def inference(logLayer, logNeuron):
     inputKernels, hiddenKernels, recKernels, outKernels = loadKernelsFromModel(model)
     inputNeurons, hiddenNeurons, _ = initNeurons(len(hiddenKernels), len(inputKernels), len(hiddenKernels[0]), len(outKernels))
     # init layers
-    inputLayer = ConvLayer(len(inputKernels[0]), len(hiddenKernels[0]), len(hiddenKernels[0, 0, 0]), dtype)
-    convLayer = ConvLayer(len(hiddenKernels[0, 0]), len(hiddenKernels[0]), len(hiddenKernels[0, 0, 0]), dtype)
+    inputLayer = Neurocore(len(inputKernels[0]), len(hiddenKernels[0]), len(hiddenKernels[0, 0, 0]), dtype)
+    convLayer = Neurocore(len(hiddenKernels[0, 0]), len(hiddenKernels[0]), len(hiddenKernels[0, 0, 0]), dtype)
 
     # load input events from file
     eventInput = loadEvents(INPUT_PATH, SEG_WIDTH, SEG_HEIGHT, NUM_INPUT)
