@@ -5,7 +5,7 @@ from timeit import timeit
 import dataloader as dl
 from config import SEG_WIDTH, SEG_HEIGHT, EVENT_TIMESLICE, REC_LAYERS, NUM_INPUT
 from utils import SpikeQueue, cropLogs
-from visualization import compNeuronLogs, compNeuronInput, plotThresholdComp
+from visualization import compNeuronLogs, compNeuronInput
 
 
 # data type for numpy arrays

@@ -94,10 +94,6 @@ def compNeuronInput(layerName):
     ax2.set_title('Own Input Spike Heatmap')
 
 
-    # Add a title to the figure
-    #fig.suptitle('Spiking behaviour of a single neuron')
-    # Display the figure
-    #plt.show()
 
 def compNeuronLogs(layerName, channel):
     ownArrInPath = "test_sequences/" + layerName + "_inLog.npy"
@@ -121,7 +117,7 @@ def compNeuronLogs(layerName, channel):
     plt.rcParams.update({'font.size': 18})
     fig, (ax1, ax3, ax2) = plt.subplots(3, 1, figsize=(8, 6))
 
-    # Plot the pytorch input heatmap
+    # Plot the input heatmap of the own implementation
     im = ax1.imshow(np.transpose(ownIn[:150]), cmap='viridis', aspect='auto')
     # Set the x and y-axis labels
     #ax3.set_xlabel('Time Bins')
@@ -133,23 +129,12 @@ def compNeuronLogs(layerName, channel):
     # Add a title to the plot
     ax1.set_title('Neuron Activity\nLayer ' + layerName + ' Channel ' + str(channel))
 
-    # # Plot the input heatmap of the own implementation
-    # im = ax2.imshow(np.transpose(own), cmap='viridis', aspect='auto')
-    # # Set the x and y-axis labels
-    # #ax3.set_xlabel('Time Bins')
-    # ax2.set_ylabel('Weighted Input Spikes\nper Channel')
-
-    # # Add a colorbar
-    # cbar = fig.colorbar(im, ax=ax2)
-    # cbar.set_label('Input Current')
-    # # Add a title to the plot
-
     # Set the width and position of the bars
     bar_width = 0.35
     num_bins = len(pytorchOut)
     bar_positions = np.arange(num_bins)
 
-    # Plot the output graph
+    # Plot the neuron activity
     ax3.plot(bar_positions, ownOut[:,0], color='red', alpha=0.7)
     ax3.axhline(y = 0.95, color = 'gray', linestyle = '--')
     ax3.set_xlim(0, num_bins)
