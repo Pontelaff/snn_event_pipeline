@@ -47,7 +47,7 @@ def logNeuron(layerNum, neuron, threshold = None, leak = None):
         kernels = hiddenKernels[layerNum-1]
         recInd = REC_LAYERS.index(layerNum)
         rKernels = recKernels[recInd]
-        #recQ = loadEventsFromArr(outPath, True)
+        #recQ = dl.loadEventsFromArr(outPath, True)
         neurons = hiddenNeurons[layerNum-1]
     else:
         neuronLogIn = np.zeros([num_bins, len(hiddenKernels[layerNum-1, 0])])
@@ -55,30 +55,19 @@ def logNeuron(layerNum, neuron, threshold = None, leak = None):
         neurons = hiddenNeurons[layerNum-1]
 
     convLayer = Neurocore(len(kernels[0]), len(kernels), len(kernels[0, 0]), dtype)
-    convLayer.assignLayer(spikeInput, kernels, neurons, recQ, rKernels, threshold, leak)
-    neuronStates, _, ffQ, recQ = convLayer.forward(neuronLogIn, neuronLogOut, neuronLogStates, neuron)
+    logIndex = 0
+    spikeNum = 0
+    while len(spikeInput) > 0:
+        convLayer.assignLayer(spikeInput, kernels, neurons, recQ, rKernels, threshold, leak)
+        neurons, spikeInput, ffQ, recQ = convLayer.forward(neuronLogIn[logIndex], neuronLogOut[logIndex], neuronLogStates[logIndex], neuron)
+        logIndex += 1
+        spikeNum += (len(ffQ))
 
-    print("%d spikes in layer %s" %(len(ffQ), layerNames[layerNum]))
+    print("%d spikes in layer %s" %(spikeNum, layerNames[layerNum]))
     np.save("test_sequences/" + layerNames[layerNum] + "_inLog.npy", neuronLogIn)
     np.save("test_sequences/" + layerNames[layerNum] + "_outLog.npy", np.stack([neuronLogStates, neuronLogOut], axis=-1))
 
     return neuronLogOut
-
-def testThresholds(layerNum, neuron, thresholds):
-    path = "test_sequences/" + layerNames[layerNum] + "_output_seq.npy"
-    pytorchOut =  np.load(path)[:,:,1,1]
-    jaccard = np.zeros(len(thresholds)) # Jaccard distance
-    hamming = np.zeros(len(thresholds)) # Hamming distance
-
-    for i in range(len(thresholds)):
-        ownOut = logNeuron(layerNames, layerNum, neuron, thresholds[i])
-        ownOut, pytorchOut = cropLogs(ownOut[:,:,1], pytorchOut)
-        matchingSpikes = np.logical_and(ownOut, pytorchOut)
-        disjunctSpikes = (ownOut != pytorchOut)
-        jaccard[i] = np.count_nonzero(disjunctSpikes)/(np.count_nonzero(ownOut + pytorchOut))
-        hamming[i] = np.count_nonzero(disjunctSpikes)/(len(disjunctSpikes)*len(disjunctSpikes[0]))
-
-    return jaccard, hamming
 
 def printStatsMD(spikes, checkpoints):
     print("\n| Layer\t| Spikes\t| Execution Time |\n|---|---|---|")
@@ -126,7 +115,6 @@ def inference(logLayer, logNeuron):
 
         recQueues = [SpikeQueue() for _ in range(len(REC_LAYERS))]
 
-
         # run hidden layers
         for l in range(len(hiddenKernels)):
             try:
@@ -166,10 +154,11 @@ def inference(logLayer, logNeuron):
 loggedLayer = 1
 loggedNeuron = (18, 1, 1)
 inference(loggedLayer, loggedNeuron)
-# load thresholds
-# thresholds = loadThresholdsFromModel(model)
-# leaks = loadLeakRatesFromModel(model)
-#extime = timeit(lambda: logNeuron(loggedLayer, loggedNeuron, thresholds[loggedLayer], leaks[loggedLayer]), number=1)
+# load thresholds and leaks
+#thresholds = dl.loadThresholdsFromModel(model)
+#leaks = dl.loadLeakRatesFromModel(model)
+#runs = 1
+#extime = timeit(lambda: logNeuron(loggedLayer, loggedNeuron, thresholds[loggedLayer], leaks[loggedLayer]), number=runs )
 #print(f"Time: {extime/runs:.6f}")
 
 #compNeuronInput(layerNames[loggedLayer])

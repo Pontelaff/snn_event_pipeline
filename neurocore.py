@@ -106,11 +106,10 @@ class Neurocore:
 
         # log neuron output spikes
         if ln is not None:
-            bin = self.timestamp//EVENT_TIMESLICE
             logNeuronStates = self.neurons[:,ln[1],ln[2]]
             thresh = np.reshape(self.thresholds, np.shape(logNeuronStates))
-            neuronStateLog[bin] = logNeuronStates
-            neuronOutLog[bin] = np.where(logNeuronStates > thresh, 1, 0)
+            neuronStateLog[:] = logNeuronStates
+            neuronOutLog[:] = np.where(logNeuronStates > thresh, 1, 0)
 
         # Get indices of all neurons that exceed the threshold
         exceed_indices = np.where(self.neurons >= self.thresholds)

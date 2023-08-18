@@ -101,8 +101,7 @@ class Pipeline:
             x_offset =  ln[1] -self.spike.x
             y_offset = ln[2] - self.spike.y
             if areNeighbours(x_offset, y_offset, self.kernelSize):
-                bin = self.spike.t//EVENT_TIMESLICE
-                neuronInLog[bin, self.spike.c + int(recSpike) * 32] += kernels[ln[0], x_offset + 1, y_offset+1]
+                neuronInLog[self.spike.c + int(recSpike) * 32] += kernels[ln[0], x_offset + 1, y_offset+1]
 
     def forward(self, s: Spike, neurons, recSpike, neuronInLog = None, loggedNeuron = None)\
                 -> Tuple[ArrayLike, SpikeQueue, SpikeQueue]:

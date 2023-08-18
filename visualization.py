@@ -169,15 +169,14 @@ def compNeuronLogs(layerName, channel):
     #ax2.set_title('Output Spike Comparison')
 
 
-    disjunctSpikes = pytorchOut != ownOut[:,1]
-    hamming = np.count_nonzero(disjunctSpikes)/len(disjunctSpikes)
-    jaccard = np.count_nonzero(disjunctSpikes)/np.count_nonzero(pytorchOut + ownOut[:,1])
-    print("\nChannel %d\nHamming distance: %f\nJaccard distance: %f\n" %(channel, hamming, jaccard))
+    #disjunctSpikes = pytorchOut != ownOut[:,1]
+    matchingSpikes = np.logical_and(ownOut[:,1], pytorchOut)
+    jaccard = np.count_nonzero(matchingSpikes)/np.count_nonzero(pytorchOut + ownOut[:,1])
+    print("\nChannel %d\nJaccard distance: %f\n" %(channel, jaccard))
 
-    disjunctSpikesAll = pytorchOutAll != ownOutAll[:,:,1]
-    hammingAll = np.count_nonzero(disjunctSpikesAll)/(len(disjunctSpikesAll)*len(disjunctSpikesAll[0]))
-    jaccardAll = np.count_nonzero(disjunctSpikesAll)/np.count_nonzero(pytorchOutAll + ownOutAll[:,:,1])
-    print("Layer %s\nHamming distance: %f\nJaccard distance: %f\n" %(layerName, hammingAll, jaccardAll))
+    matchingSpikesAll = np.logical_and(ownOutAll[:,:,1], pytorchOutAll)
+    jaccardAll = np.count_nonzero(matchingSpikesAll)/np.count_nonzero(pytorchOutAll + ownOutAll[:,:,1])
+    print("Layer %s\nJaccard distance: %f\n" %(layerName, jaccardAll))
 
     fig.set_size_inches(w=15, h=7)
     plt.subplots_adjust(bottom=0.13, right=0.97, left=0.09, top=0.97, hspace=0.42)
@@ -190,21 +189,3 @@ def compNeuronLogs(layerName, channel):
     #plt.close()
 
     return
-
-def plotThresholdComp(jacDistance, hamDistance, thresholds):
-    # Plotting the first line graph
-    plt.plot(thresholds, jacDistance, label='Jaccard')
-
-    # Plotting the second line graph
-    plt.plot(thresholds, hamDistance, label='Hamming')
-
-    # Adding labels and title
-    plt.xlabel('Thresholds')
-    plt.ylabel('Distance')
-    #plt.title('Two Line Graphs')
-
-    # Adding a legend
-    plt.legend()
-
-    # Display the plot
-    plt.show()
