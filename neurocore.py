@@ -149,7 +149,7 @@ class Neurocore:
 
         self.neurons[:, x-l:x+r+1, y-u:y+d+1] = updatedNeurons[:, 1-l:2+r, 1-u:2+d]
 
-    def forward(self, neuronInLog = None, neuronOutLog = None, neuronStateLog = None, loggedNeuron = None) -> Tuple[List, SpikeQueue, SpikeQueue]:
+    def forward(self, neuronInLog = None, neuronOutLog = None, neuronStateLog = None, loggedNeuron = None) -> Tuple[List, SpikeQueue, SpikeQueue, SpikeQueue]:
         """
         This function processes events from an input queue, updates neurons, and generates new events
         for an output queue.
@@ -164,7 +164,7 @@ class Neurocore:
         @param threshold The threshold to use in the pipeline. If 'None' the default threshold constant
         will be used.
 
-        @return a tuple containing a list of neurons states, an event queue and the timestamp of the last update
+        @return a tuple containing a list of neurons states, and event queues
         """
 
         while len(self.inQueue) > 0:
@@ -180,16 +180,18 @@ class Neurocore:
 
             if (s.t >= self.timestamp + EVENT_TIMESLICE):
                 # next time slice reached, generate spikes and leak neurons
+                # only reached for input layer to seperate event input into time windows
                 self.checkThreshold(neuronOutLog, neuronStateLog, loggedNeuron)
                 self.leakNeurons()
                 self.timestamp = (s.t//EVENT_TIMESLICE)*EVENT_TIMESLICE
+                break
 
             updatedNeurons = self.pipelines[s.c].forward(s, self.neurons, spikeIsRec, neuronInLog, loggedNeuron)
             self.updateNeurons(s.x, s.y, updatedNeurons)
 
-        # # next time slice reached, generate spikes and leak neurons
-        # self.checkThreshold(neuronOutLog, neuronStateLog, loggedNeuron)
-        # self.leakNeurons()
-        # self.timestamp = (s.t//EVENT_TIMESLICE)*EVENT_TIMESLICE
+        # end of queue reached, generate spikes and leak neurons
+        if len(self.inQueue) == 0:
+            self.checkThreshold(neuronOutLog, neuronStateLog, loggedNeuron)
+            self.leakNeurons()
 
-        return self.neurons, self.outQueue, self.recQueue
+        return self.neurons, self.inQueue, self.outQueue, self.recQueue
