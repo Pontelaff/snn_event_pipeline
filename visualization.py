@@ -114,14 +114,15 @@ def compNeuronLogs(layerName, channel):
 
     ownOutAll, pytorchOutAll = cropLogs(ownOutAll, pytorchOutAll)
     pytorchInSum = np.sum(pytorchIn, axis= (-1,-2))
-    pytorchOut = pytorchOutAll[:, channel]
-    ownOut = ownOutAll[:, channel]
+    pytorchOut = pytorchOutAll[:150, channel]
+    ownOut = ownOutAll[:150, channel]
 
      # Create the figure and subplots
+    plt.rcParams.update({'font.size': 18})
     fig, (ax1, ax3, ax2) = plt.subplots(3, 1, figsize=(8, 6))
 
     # Plot the pytorch input heatmap
-    im = ax1.imshow(np.transpose(ownIn), cmap='viridis', aspect='auto')
+    im = ax1.imshow(np.transpose(ownIn[:150]), cmap='viridis', aspect='auto')
     # Set the x and y-axis labels
     #ax3.set_xlabel('Time Bins')
     ax1.set_ylabel('Input Spikes\nper Channel')
@@ -149,21 +150,22 @@ def compNeuronLogs(layerName, channel):
     bar_positions = np.arange(num_bins)
 
     # Plot the output graph
-    ax3.plot(bar_positions, ownOut[:,0], color='blue', alpha=0.7)
+    ax3.plot(bar_positions, ownOut[:,0], color='red', alpha=0.7)
+    ax3.axhline(y = 0.95, color = 'gray', linestyle = '--')
     ax3.set_xlim(0, num_bins)
     #ax3.set_ylim(-5, 2)
     #ax3.set_xlabel('Time Bins')
-    ax3.set_ylabel('Membrane Potential')
+    ax3.set_ylabel('Membrane\nPotential')
     #ax2.set_title('Neuron Activity Level')
 
     # Plot the output graph
-    ax2.bar(bar_positions - bar_width/2, pytorchOut, color='red', alpha=0.7, width=bar_width, label='Pytorch (batch based)')
-    ax2.bar(bar_positions + bar_width/2, ownOut[:,1], color='blue', alpha=0.7, width=bar_width, label='Own (event based)')
+    ax2.bar(bar_positions - bar_width/2, pytorchOut, color='blue', alpha=0.7, width=bar_width, label='Pytorch (batch based)')
+    ax2.bar(bar_positions + bar_width/2, ownOut[:,1], color='red', alpha=0.7, width=bar_width, label='Own (event based)')
     ax2.set_xlim(0, num_bins)
-    ax2.set_ylim(0, 3)
+    ax2.set_ylim(0, 1.5)
     ax2.set_xlabel('Time Bins')
-    ax2.set_ylabel('Output Spikes')
-    ax2.legend()
+    ax2.set_ylabel('Output\nSpikes')
+    #ax2.legend()
     #ax2.set_title('Output Spike Comparison')
 
 
@@ -177,6 +179,8 @@ def compNeuronLogs(layerName, channel):
     jaccardAll = np.count_nonzero(disjunctSpikesAll)/np.count_nonzero(pytorchOutAll + ownOutAll[:,:,1])
     print("Layer %s\nHamming distance: %f\nJaccard distance: %f\n" %(layerName, hammingAll, jaccardAll))
 
+    fig.set_size_inches(w=15, h=7)
+    plt.subplots_adjust(bottom=0.13, right=0.97, left=0.09, top=0.97, hspace=0.42)
 
     # Add a title to the figure
     #fig.suptitle('Spiking behaviour of a single neuron')
