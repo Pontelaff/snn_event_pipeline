@@ -7,9 +7,10 @@ from numpy.typing import ArrayLike
 from models.model import FireNet, LIFFireNet
 from utils import SpikeQueue, Spike
 
+FILTER_EVENTS = False
 FRAME_OFFSET = (240, 10)
 TIME_START = 80000
-TIME_STOP = 180000
+TIME_STOP = 83000
 
 
 def sigmoid(x):
@@ -131,18 +132,24 @@ def loadEvents(filePath, frameWidth, frameHeight, maxEvents = -1) -> SpikeQueue:
         events[:,3] = file["events/ts"][:numEvents]
         file.close()
 
-        # filter a 32x32 window of the dropping cup
-        mask = (events[:, 0] >= FRAME_OFFSET[0]) & (events[:, 0] <= FRAME_OFFSET[0] + frameWidth-1) &\
-            (events[:, 1] >= FRAME_OFFSET[1]) & (events[:, 1] <= FRAME_OFFSET[1] + frameHeight-1) &\
-            (events[:, 3] >= TIME_START) & (events[:,3] <= TIME_STOP)
-        ev = events[mask][:maxEvents]
+        if FILTER_EVENTS:
+            # filter a 32x32 window of the dropping cup
+            mask = (events[:, 0] >= FRAME_OFFSET[0]) & (events[:, 0] <= FRAME_OFFSET[0] + frameWidth-1) &\
+                (events[:, 1] >= FRAME_OFFSET[1]) & (events[:, 1] <= FRAME_OFFSET[1] + frameHeight-1) &\
+                (events[:, 3] >= TIME_START) & (events[:,3] <= TIME_STOP)
+            ev = events[mask][:maxEvents]
 
-        # subtract offset to start at t = 0
-        t_offset = ev[0,3]
-        ev[:,3] -= t_offset
+            ev[:,0] = ev[:,0] - FRAME_OFFSET[0]
+            ev[:,1] = ev[:,1] - FRAME_OFFSET[1]
 
-        spikeQueue = [Spike(ev[i][0]-FRAME_OFFSET[0], ev[i][1]-FRAME_OFFSET[1], int(ev[i][2]), int(ev[i][3])) for i in range(len(ev))]
-        print(f"{len(spikeQueue)} input events read from {filePath}\n")
+            # subtract offset to start at t = 0
+            t_offset = ev[0,3]
+            ev[:,3] -= t_offset
+        else:
+            ev = events
+
+        spikeQueue = [Spike(ev[i][0], ev[i][1], int(ev[i][2]), int(ev[i][3])) for i in range(len(ev))]
+        print(f"{len(spikeQueue)} input events read from {filePath}")
     else:
         print("File not found at " + filePath + "\n")
         return None
