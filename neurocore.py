@@ -2,11 +2,12 @@ import numpy as np
 from typing import List, Tuple
 from numpy.typing import ArrayLike
 from utils import SpikeQueue, Spike
-from pipeline import Pipeline, EVENT_TIMESLICE
+from pipeline import Pipeline
+from config import EVENT_TIMESLICE
 
 INPUT_LEAKS = True
 LEAK_RATE = 0.017
-REC_DELAY = 100
+REC_DELAY = EVENT_TIMESLICE
 U_RESET = 0
 U_THRESH = 1.0
 
@@ -116,8 +117,7 @@ class Neurocore:
 
         # Reset potential of all exceeded neurons
         self.neurons[exceed_indices] = U_RESET
-        #self.neurons[self.neurons >= self.thresholds] = U_RESET # hard reset
-        #np.subtract(self.neurons, threshold, out=self.neurons, where=self.neurons>=threshold) # soft reset
+        #self.neurons[exceed_indices] -= self.thresholds # soft reset
 
         # Generate events for spiking neurons
         ffEvents = [Spike(x, y, c, self.timestamp) for c, x, y in zip(*exceed_indices)]

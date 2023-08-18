@@ -6,6 +6,7 @@ from typing import Tuple
 from numpy.typing import ArrayLike
 from models.model import FireNet, LIFFireNet
 from utils import SpikeQueue, Spike
+from config import MODEL_PATH, INPUT_PATH, NUM_INPUT
 
 FILTER_EVENTS = False
 FRAME_OFFSET = (240, 10)
@@ -23,18 +24,18 @@ def sigmoid(x):
     """
     return 1/(1 + np.exp(-x))
 
-def loadModel(modelPath) -> LIFFireNet:
+def loadModel() -> LIFFireNet:
     """
     This function loads a LIFFireNet PyTorch model from a given file path and returns it.
 
     @param modelPath The path to the saved model file.
     @return An instance of the `LIFFireNet` class or `None`, if the path is invalid.
     """
-    if os.path.isfile(modelPath):
-        model = torch.load(modelPath, 'cpu')
-        print("Model restored from " + modelPath + "\n")
+    if os.path.isfile(MODEL_PATH):
+        model = torch.load(MODEL_PATH, 'cpu')
+        print("Model restored from " + MODEL_PATH + "\n")
     else:
-        print("No model found at" + modelPath + "\n")
+        print("No model found at" + MODEL_PATH + "\n")
         model = None
 
     return model
@@ -110,18 +111,17 @@ def loadEventsFromArr(arrPath, recurrent = False) -> SpikeQueue:
 
     return spikeQueue
 
-def loadEvents(filePath, frameWidth, frameHeight, maxEvents = -1) -> SpikeQueue:
+def loadEvents(frameWidth, frameHeight, maxEvents = -1) -> SpikeQueue:
     """
     This function loads events from a specified file path, filters them based on certain criteria,
     subtracts an offset to start at t=0, and returns a list of Spike objects.
 
-    @param filePath The file path of the input file containing events data.
     @param maxEvents The number of events to load from the file. If set to -1, it will load all events
     in the file.
     @return A Spike Queue as a list of Spike tuples
     """
-    if os.path.isfile(filePath):
-        file = h5py.File(filePath, 'r')
+    if os.path.isfile(INPUT_PATH):
+        file = h5py.File(INPUT_PATH, 'r')
         numEvents = file.attrs["num_events"]
         if maxEvents == -1:
             maxEvents = numEvents
@@ -148,10 +148,10 @@ def loadEvents(filePath, frameWidth, frameHeight, maxEvents = -1) -> SpikeQueue:
         else:
             ev = events
 
-        spikeQueue = [Spike(ev[i][0], ev[i][1], int(ev[i][2]), int(ev[i][3])) for i in range(len(ev))]
-        print(f"{len(spikeQueue)} input events read from {filePath}")
+        spikeQueue = [Spike(event[0], event[1], int(event[2]), int(event[3])) for event in ev]
+        print(f"{len(spikeQueue)} input events read from {INPUT_PATH}")
     else:
-        print("File not found at " + filePath + "\n")
+        print("File not found at " + INPUT_PATH + "\n")
         return None
 
     return spikeQueue

@@ -2,9 +2,8 @@ import numpy as np
 from utils import Spike, SpikeQueue
 from typing import Tuple
 from numpy.typing import ArrayLike
+from config import EVENT_TIMESLICE
 
-EVENT_TIMESLICE = 1000
-REFRACTORY_PERIOD = 50
 
 def areNeighbours(x_off, y_off, kernelSize) -> bool:
     """
