@@ -6,7 +6,7 @@ from typing import Tuple
 from numpy.typing import ArrayLike
 from models.model import FireNet, LIFFireNet
 from utils import SpikeQueue, Spike
-from config import MODEL_PATH, INPUT_PATH, NUM_INPUT
+from config import MODEL_PATH, INPUT_PATH, EVENT_TIMESLICE
 
 FILTER_EVENTS = False
 FRAME_OFFSET = (240, 10)
@@ -105,7 +105,7 @@ def loadEventsFromArr(arrPath, recurrent = False) -> SpikeQueue:
     for t, c, y, x in zip(*eventIdx):
         spikeNum = int(eventArr[t, c, y, x])
         for _ in range(spikeNum):
-            spikeQueue.append(Spike(x, y, c,(t+int(recurrent))*100))
+            spikeQueue.append(Spike(x, y, c,(t+int(recurrent))*EVENT_TIMESLICE))
 
     print(f"{len(spikeQueue)} input events read from {arrPath}\n")
 
