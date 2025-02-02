@@ -16,19 +16,17 @@ TIME_STOP = 83000
 
 def sigmoid(x):
     """
-    The above function calculates the sigmoid function for a given input value x.
-    This function is used for calculating the learned leak parameters.
+    The sigmoid function is used for calculating the learned leak parameters.
 
     @param x The input value to the sigmoid function. It can be a scalar, vector, or matrix.
-    @return The  output of the sigmoid function applied to the input  `x`.
+    @return The output of the sigmoid function applied to the input  `x`.
     """
     return 1/(1 + np.exp(-x))
 
 def loadModel() -> LIFFireNet:
     """
-    This function loads a LIFFireNet PyTorch model from a given file path and returns it.
+    This function loads the pre-trained LIFFireNet PyTorch model.
 
-    @param modelPath The path to the saved model file.
     @return An instance of the `LIFFireNet` class or `None`, if the path is invalid.
     """
     if os.path.isfile(MODEL_PATH):
@@ -41,9 +39,9 @@ def loadModel() -> LIFFireNet:
     return model
 
 
-def loadThresholdsFromModel(model : LIFFireNet) -> ArrayLike:
+def loadThresholdsFromModel(model: LIFFireNet) -> ArrayLike:
     """
-    This function loads the thresholds from a given model and returns them as an array.
+    This function loads the thresholds from a given LIFFireNet model and returns them as an array.
 
     @param model A model of type LIFFireNet.
     @return An array of per channel thresholds from all layers of the model.
@@ -53,10 +51,10 @@ def loadThresholdsFromModel(model : LIFFireNet) -> ArrayLike:
 
     return thresholds
 
-def loadLeakRatesFromModel(model) -> ArrayLike:
+def loadLeakRatesFromModel(model: LIFFireNet) -> ArrayLike:
     """
-    This function loads leak rates from a given model and returns them as a numpy array after applying
-    the sigmoid function.
+    This function loads leak rates from a given LIFFireNet model and returns them as a numpy array
+    after applying the sigmoid function.
 
     @param model A model of type LIFFireNet.
     @return An array of per channel leaks from all layers of the model.
@@ -67,9 +65,9 @@ def loadLeakRatesFromModel(model) -> ArrayLike:
 
     return leaks
 
-def loadKernelsFromModel(model) -> Tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
+def loadKernelsFromModel(model: LIFFireNet) -> Tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
     """
-    The function loads kernels from a saved PyTorch model and returns them as a tuple of arrays.
+    The function loads kernels from a given LIFFireNet model and returns them as a tuple of arrays.
 
     @param model The pytorch model to load the kernel weights from.
     @return A tuple containing four arrays of weights: inputKernels, hiddenKernels, recKernels, and
@@ -91,7 +89,7 @@ def loadKernelsFromModel(model) -> Tuple[ArrayLike, ArrayLike, ArrayLike, ArrayL
 
     return (inputKernels, hiddenKernels, recKernels, outputKernels)
 
-def loadEventsFromArr(arrPath, recurrent = False) -> SpikeQueue:
+def loadEventsFromArr(arrPath: str, recurrent: bool = False) -> SpikeQueue:
     """
     The function loads events from a numpy array and creates a SpikeQueue object containing the events.
 
@@ -111,14 +109,16 @@ def loadEventsFromArr(arrPath, recurrent = False) -> SpikeQueue:
 
     return spikeQueue
 
-def loadEvents(frameWidth, frameHeight, maxEvents = -1) -> SpikeQueue:
+def loadEvents(frameWidth: int, frameHeight: int, maxEvents: int = -1) -> SpikeQueue:
     """
-    This function loads events from a specified file path, filters them based on certain criteria,
+    The function `loadEvents` reads input events from a file, filters them,
     subtracts an offset to start at t=0, and returns a list of Spike objects.
 
-    @param maxEvents The number of events to load from the file. If set to -1, it will load all events
-    in the file.
-    @return A Spike Queue as a list of Spike tuples
+    @param frameWidth Represents the width of the frame in which events are being loaded.
+    @param frameHeight Represents the height of the frame in which events are being loaded.
+    @param maxEvents Specifies the maximum number of events to load from the input file. If
+    `maxEvents` is set to -1 (default value), it will load all events from the file.
+    @return A Spike Queue as a list of Spike tuples.
     """
     if os.path.isfile(INPUT_PATH):
         file = h5py.File(INPUT_PATH, 'r')
