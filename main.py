@@ -26,7 +26,7 @@ def printLayerStats(spikes, checkpoints):
         print("%s:\t%d\t\t%s" %(FIRENET_LAYERS[i], spikes[i], (checkpoints[i+1] - checkpoints[i])*1000))
     print("All:\t%d\t\t%s" %(sum(spikes), (checkpoints[-1] - checkpoints[0])*1000))
 
-def inference():
+def inference(model):
     # Checkpoint timestamps for each layer completion
     startTime = time.perf_counter()
     # Initialise kernel weights and neuron states
@@ -90,7 +90,11 @@ def inference():
 
     print("\nInference time:\t%s ms" %((checkpointTimes[-1] - startTime)*1000))
 
-# Load the LIFFireNet PyTorch model
-model = dl.loadModel()
+def main():
+    # Load the LIFFireNet PyTorch model
+    model = dl.loadModel()
 
-inference()
+    inference(model)
+
+if __name__ == '__main__':
+    main()
