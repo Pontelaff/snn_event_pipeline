@@ -1,11 +1,10 @@
 import numpy as np
 import time
 from neurocore import Neurocore
-from timeit import timeit
 import dataloader as dl
-from config import SEG_WIDTH, SEG_HEIGHT, EVENT_TIMESLICE, REC_LAYERS, NUM_INPUT
-from utils import SpikeQueue, cropLogs
-from visualization import compNeuronLogs, compNeuronInput
+from config import SEG_WIDTH, SEG_HEIGHT, REC_LAYERS, NUM_INPUT
+from utils import SpikeQueue
+
 
 
 # data type for numpy arrays
@@ -22,53 +21,6 @@ def initNeurons(numHiddenLayers, numInKernels, numHiddenKernels, numOutKernels):
 
     return inputNeurons, hiddenNeurons, outputNeurons
 
-def logNeuron(layerNum, neuron, threshold = None, leak = None):
-
-    # load input events from file
-    inPath = "test_sequences/" + layerNames[layerNum] + "_input_seq.npy"
-    outPath = "test_sequences/" + layerNames[layerNum] + "_output_seq.npy"
-    spikeInput = dl.loadEventsFromArr(inPath)
-
-    # initialise kernel weights and neuron states
-    inputKernels, hiddenKernels, recKernels, outKernels = dl.loadKernelsFromModel(model)
-    inputNeurons, hiddenNeurons, _ = initNeurons(len(hiddenKernels), len(inputKernels), len(hiddenKernels[0]), len(outKernels))
-
-    num_bins = spikeInput[-1].t//EVENT_TIMESLICE + 1
-    neuronLogOut = np.zeros([num_bins, len(inputKernels)])
-    neuronLogStates = np.zeros([num_bins, len(inputKernels)])
-    recQ = SpikeQueue()
-    rKernels = None
-    if layerNum == 0:
-        neuronLogIn = np.zeros([num_bins, len(inputKernels[0])])
-        kernels = inputKernels
-        neurons = inputNeurons
-    elif REC_LAYERS.count(layerNum):
-        neuronLogIn = np.zeros([num_bins, len(hiddenKernels[0])*2])
-        kernels = hiddenKernels[layerNum-1]
-        recInd = REC_LAYERS.index(layerNum)
-        rKernels = recKernels[recInd]
-        #recQ = dl.loadEventsFromArr(outPath, True)
-        neurons = hiddenNeurons[layerNum-1]
-    else:
-        neuronLogIn = np.zeros([num_bins, len(hiddenKernels[layerNum-1, 0])])
-        kernels = hiddenKernels[layerNum-1]
-        neurons = hiddenNeurons[layerNum-1]
-
-    convLayer = Neurocore(len(kernels[0]), len(kernels), len(kernels[0, 0]), dtype)
-    logIndex = 0
-    spikeNum = 0
-    while len(spikeInput) > 0:
-        convLayer.assignLayer(spikeInput, kernels, neurons, recQ, rKernels, threshold, leak)
-        neurons, spikeInput, ffQ, recQ = convLayer.forward(neuronLogIn[logIndex], neuronLogOut[logIndex], neuronLogStates[logIndex], neuron)
-        logIndex += 1
-        spikeNum += (len(ffQ))
-
-    print("%d spikes in layer %s" %(spikeNum, layerNames[layerNum]))
-    np.save("test_sequences/" + layerNames[layerNum] + "_inLog.npy", neuronLogIn)
-    np.save("test_sequences/" + layerNames[layerNum] + "_outLog.npy", np.stack([neuronLogStates, neuronLogOut], axis=-1))
-
-    return neuronLogOut
-
 def printStatsMD(spikes, checkpoints):
     print("\n| Layer\t| Spikes\t| Execution Time |\n|---|---|---|")
     for i in range(len(layerNames)-1):
@@ -81,10 +33,7 @@ def printStats(spikes, checkpoints):
         print("%s:\t%d\t\t%s" %(layerNames[i], spikes[i], (checkpoints[i+2] - checkpoints[i+1])*1000))
     print("All:\t%d\t\t%s" %(sum(spikes), (checkpoints[8] - checkpoints[1])*1000))
 
-def inference(logLayer, logNeuron):
-    cp_time = np.zeros(9)
-    cp_time[0] = time.perf_counter()
-    num_spikes = np.zeros(7)
+def inference():
     # initialise kernel weights and neuron states
     inputKernels, hiddenKernels, recKernels, outKernels = dl.loadKernelsFromModel(model)
     inputNeurons, hiddenNeurons, _ = initNeurons(len(hiddenKernels), len(inputKernels), len(hiddenKernels[0]), len(outKernels))
@@ -97,9 +46,6 @@ def inference(logLayer, logNeuron):
     # load thresholds and leaks from model
     thresholds = dl.loadThresholdsFromModel(model)
     leaks = dl.loadLeakRatesFromModel(model)
-    neuronLogIn = None
-    neuronLogOut = None
-    neuronLogStates = None
 
 
     print("Load time: %s ms" %((time.perf_counter() - cp_time[0])*1000))
@@ -123,15 +69,7 @@ def inference(logLayer, logNeuron):
             except ValueError as ve:
                 rec = False
 
-            if l == logLayer-1:
-                num_bins = ffQ[-1].t//EVENT_TIMESLICE +1
-                neuronLogOut = np.zeros([num_bins, len(hiddenKernels[l])])
-                neuronLogStates = np.zeros([num_bins, len(hiddenKernels[l])])
-                neuronLogIn = np.zeros([num_bins, len(hiddenKernels[l, 0])])
-                ln = logNeuron
-            else:
-                ln = None
-
+            # Use recurrent kernels and spike queues for recurrent layers
             if rec:
                 convLayer.assignLayer(ffQ, hiddenKernels[l], hiddenNeurons[l], recQueues[recInd], recKernels[recInd], thresholds[l], leaks[l])
                 hiddenNeurons[l], _, ffQ, recQueues[recInd]= convLayer.forward()
@@ -151,18 +89,4 @@ def inference(logLayer, logNeuron):
 
     return num_spikes
 
-loggedLayer = 1
-loggedNeuron = (18, 1, 1)
-inference(loggedLayer, loggedNeuron)
-# load thresholds and leaks
-#thresholds = dl.loadThresholdsFromModel(model)
-#leaks = dl.loadLeakRatesFromModel(model)
-#runs = 1
-#extime = timeit(lambda: logNeuron(loggedLayer, loggedNeuron, thresholds[loggedLayer], leaks[loggedLayer]), number=runs )
-#print(f"Time: {extime/runs:.6f}")
-
-#compNeuronInput(layerNames[loggedLayer])
-#compNeuronLogs(layerNames[loggedLayer], loggedNeuron[0])
-
-
-pass
+inference()
