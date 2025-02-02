@@ -33,12 +33,12 @@ class Neurocore:
         @param kernelSize The kernelSize parameter is the size of the convolutional kernel/filter that will
         be used in the neurocore.
         """
-        # generate pipelines
+        # Generate pipelines
         self.pipelines = [Pipeline(c, numKernels, kernelSize, dtype) for c in range(inChannels)]
 
-    def assignLayer(self, inQueue : SpikeQueue, layerKernels, neurons, recQueue = SpikeQueue(), recKernels = None, threshold = None, leak = None):
+    def assignLayer(self, inQueue: SpikeQueue, layerKernels, neurons, recQueue = SpikeQueue(), recKernels = None, threshold = None, leak = None):
         """
-        This function assigns a new layer to a set of pipelines with specified kernels, and neurons.
+        This function assigns new layer parameters to a set of pipelines with specified kernels and neurons.
 
         @param inQueue A List containing Spike tuples representing the input queue for the neurocore.
         @param layerKernels A Numpy array containing the convolutional kernels that represent the
@@ -46,7 +46,7 @@ class Neurocore:
         one channel of each kernel from this list.
         @param neurons A set of neuron states of the new layer
         @param recQueue A List containing Spike tuples representing recurrent spikes of an earlier iteration
-        @param recKernels A numpy array containing the ercurrent Kernels, if the layer should be recurrent or
+        @param recKernels A numpy array containing the rercurrent Kernels, if the layer should be recurrent or
         None otherwise.
         @param threshold A 1-dimensional array containing per channel thresholds.
         @param threshold A 1-dimensional array containing per channel leak rates.
@@ -59,7 +59,7 @@ class Neurocore:
         self.recurrent = recKernels is not None
         self.timestamp = (inQueue[0].t//EVENT_TIMESLICE)*EVENT_TIMESLICE
 
-        # use default threshold and leak rate if none are given
+        # Use default threshold and leak rate if none are given
         if threshold is not None:
             self.thresholds = threshold
         else:
@@ -69,9 +69,9 @@ class Neurocore:
         else:
             self.leaks = np.ones([numOutChannels, 1, 1]) * LEAK_RATE
 
-        # multiply input kernels with (1 - leak), if INPUT_LEAKS is set
-        # the original implementation multiplied all incoming currents with (1 - leak)
-        # modifying the kernels once achieves the same result
+        # Multiply input kernels with (1 - leak), if INPUT_LEAKS is set
+        # The original implementation multiplied all incoming currents with (1 - leak)
+        # Modifying the kernels once achieves the same result
         if INPUT_LEAKS:
             layerKernels = layerKernels * (1 - self.leaks.reshape(numOutChannels,1,1,1))
             if self.recurrent:
@@ -89,7 +89,7 @@ class Neurocore:
 
         return self.neurons
 
-    def checkThreshold(self, neuronOutLog = None, neuronStateLog = None, ln = None) -> Tuple[ArrayLike, SpikeQueue, SpikeQueue]:
+    def checkThreshold(self, neuronOutLog = None, neuronStateLog = None, loggedNeuron  = None) -> Tuple[ArrayLike, SpikeQueue, SpikeQueue]:
         """
         This function checks if the neuron states exceed a threshold potential, resets them if they do,
         and adds a spike event to a queue.
@@ -98,15 +98,13 @@ class Neurocore:
         channel and time step.
         @param neuronStateLog A numpy array used to log the membrane potential of one neuron in the layer at each
         channel and time step.
-        @param ln A tuple that contains the channel, row, and column indices of a specific neuron in
+        @param loggedNeuron  A tuple that contains the channel, row, and column indices of a specific neuron in
         the network. It is used to log the state and output of that neuron.
-
-        TODO: reset negative states?
         """
 
-        # log neuron output spikes
-        if ln is not None:
-            logNeuronStates = self.neurons[:,ln[1],ln[2]]
+        # Log neuron output spikes
+        if loggedNeuron  is not None:
+            logNeuronStates = self.neurons[:,loggedNeuron [1],loggedNeuron [2]]
             thresh = np.reshape(self.thresholds, np.shape(logNeuronStates))
             neuronStateLog[:] = logNeuronStates
             neuronOutLog[:] = np.where(logNeuronStates > thresh, 1, 0)
@@ -139,8 +137,8 @@ class Neurocore:
         @param updatedNeurons a numpy array containing the updated values for a subset of neurons in the
         neurocore.
         """
-        # NOTE: needs to be adjusted for kernels with a size other then c*3*3
-        # determines if the spike occured at an edge of the channel
+        # NOTE: Assumes 3x3 kernels. Adjust for other kernel sizes.
+        # Determines if the spike occured at an edge of the channel
         l = 1 if x > 0 else 0
         r = 1 if x < len(self.neurons[0])-1 else 0
         u = 1 if y > 0 else 0
@@ -178,8 +176,8 @@ class Neurocore:
                 s = self.inQueue.pop(0)
 
             if (s.t >= self.timestamp + EVENT_TIMESLICE):
-                # next time slice reached, generate spikes and leak neurons
-                # only reached for input layer to seperate event input into time windows
+                # Next time slice reached, generate spikes and leak neurons
+                # Only reached for input layer to seperate event input into time windows
                 self.checkThreshold(neuronOutLog, neuronStateLog, loggedNeuron)
                 self.leakNeurons()
                 self.timestamp = (s.t//EVENT_TIMESLICE)*EVENT_TIMESLICE
@@ -188,7 +186,7 @@ class Neurocore:
             updatedNeurons = self.pipelines[s.c].forward(s, self.neurons, spikeIsRec, neuronInLog, loggedNeuron)
             self.updateNeurons(s.x, s.y, updatedNeurons)
 
-        # end of queue reached, generate spikes and leak neurons
+        # End of queue reached, generate spikes and leak neurons
         if len(self.inQueue) == 0:
             self.checkThreshold(neuronOutLog, neuronStateLog, loggedNeuron)
             self.leakNeurons()

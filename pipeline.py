@@ -2,7 +2,6 @@ import numpy as np
 from utils import Spike, SpikeQueue
 from typing import Tuple
 from numpy.typing import ArrayLike
-from config import EVENT_TIMESLICE
 
 
 def areNeighbours(x_off, y_off, kernelSize) -> bool:
@@ -22,10 +21,9 @@ def areNeighbours(x_off, y_off, kernelSize) -> bool:
     return neighbours
 
 class Pipeline:
-    # member attributes
     kernels = None      # 32*3*3 numpy array containing one channel each of 32 Kernels
-    recKernels = None   # recurrent Kernels
-    spike = None    # spike for convolution step
+    recKernels = None   # Recurrent Kernels
+    spike = None        # Spike for convolution step
 
     def __init__(self, channel, numKernels, kernelSize, dtype) -> None:
         """
@@ -39,7 +37,8 @@ class Pipeline:
         """
         self.channel = channel
         self.kernelSize = kernelSize
-        self.neuronStates = np.zeros([numKernels,kernelSize,kernelSize], dtype=dtype) # numpy array containing neighbours of spiking neuron
+        # Numpy array containing neighbours of spiking neuron
+        self.neuronStates = np.zeros([numKernels,kernelSize,kernelSize], dtype=dtype)
 
     def assignLayer(self, kernels, recKernels = None):
         """
@@ -50,7 +49,7 @@ class Pipeline:
                 [Kernals, Channels, KSize, KSize]
         @param recKernels All recurrent kernels. None, if layer is not recurrent.
         """
-        # from active layer for all kernels load the designated channel
+        # From active layer for all kernels load the designated channel
         self.kernels = kernels[:, self.channel]
         if recKernels is not None:
             self.recKernels = recKernels[:, self.channel]
@@ -67,11 +66,11 @@ class Pipeline:
         positions of the neurons in the layer.
         """
 
-        # pad each channel with zeros (don't pad neuron states)
+        # Pad each channel with zeros (don't pad neuron states)
         neurons = np.pad(neurons, ((0,0),(1,1),(1,1)), 'constant')
-        # for each channel of current layer
-        # load neuron states neighbouring spike coordinates
-        # start pos-1 stop pos+2 and increment by 1 to account for padding
+        # For each channel of current layer
+        # Load neuron states neighbouring spike coordinates
+        # Start pos-1 stop pos+2 and increment by 1 to account for padding
         self.neuronStates = neurons[:, s.x:s.x+3, s.y:s.y+3]
         self.spike = s
 
@@ -124,10 +123,10 @@ class Pipeline:
 
         @return A numpy array containing the updated neuron states.
         """
-        # load neurons into pipeline
+        # Load neurons into pipeline
         self.loadNeurons(s, neurons)
 
-        # perform convolution and generate spikes
+        # Perform convolution and generate spikes
         self.applyConv(recSpike, neuronInLog, loggedNeuron)
 
 
